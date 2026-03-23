@@ -271,3 +271,25 @@ export function useLikeBlog(accessToken?: string | null) {
     },
   });
 }
+
+// ─── All posts (minimal fields) for calendar view
+// Fetches all published posts in batches and resolves to a flat array.
+export function useAllBlogsForCalendar(accessToken?: string | null) {
+  return useInfiniteQuery<GetBlogsResult, Error, InfiniteData<GetBlogsResult>, string[], string | null>({
+    queryKey: ['blogs-calendar'],
+    queryFn: async ({ pageParam }) => {
+      const client = createGraphQLClient(accessToken);
+      return client.request<GetBlogsResult>(GET_BLOGS, {
+        first: 200,
+        after: pageParam ?? null,
+        filter: { status: { eq: 'published' } },
+        orderBy: [{ createdAt: 'DescNullsLast' }],
+      });
+    },
+    initialPageParam: null,
+    getNextPageParam: (lastPage) =>
+      lastPage.mobileBlogCollection.pageInfo.hasNextPage
+        ? lastPage.mobileBlogCollection.pageInfo.endCursor
+        : undefined,
+  });
+}

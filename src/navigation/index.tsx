@@ -13,17 +13,19 @@ import { FeedScreen } from '../screens/FeedScreen';
 import { PostDetailScreen } from '../screens/PostDetailScreen';
 import { CreateEditPostScreen } from '../screens/CreateEditPostScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { CalendarScreen } from '../screens/CalendarScreen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 // ─── Param Lists — re-exported from types.ts to avoid circular imports ───────
-export type { RootStackParamList, FeedStackParamList, ProfileStackParamList, TabParamList } from './types';
-import type { RootStackParamList, FeedStackParamList, ProfileStackParamList, TabParamList } from './types';
+export type { RootStackParamList, FeedStackParamList, ProfileStackParamList, CalendarStackParamList, TabParamList } from './types';
+import type { RootStackParamList, FeedStackParamList, ProfileStackParamList, CalendarStackParamList, TabParamList } from './types';
 
 // ─── Stack / Tab instances ────────────────────────────────────────────────────
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const FeedStack = createNativeStackNavigator<FeedStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 // ─── Feed Stack Navigator ─────────────────────────────────────────────────────
@@ -66,6 +68,24 @@ function ProfileNavigator() {
   );
 }
 
+// ─── Calendar Stack Navigator ──────────────────────────────────────────────────
+function CalendarNavigator() {
+  const { theme } = useTheme();
+  const { colors } = theme;
+  return (
+    <CalendarStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+        animation: 'slide_from_right',
+      }}
+    >
+      <CalendarStack.Screen name="CalendarHome" component={CalendarScreen} />
+      <CalendarStack.Screen name="PostDetail" component={PostDetailScreen} />
+    </CalendarStack.Navigator>
+  );
+}
+
 // ─── Bottom Tab Navigator ─────────────────────────────────────────────────────
 
 function AppTabs() {
@@ -96,6 +116,16 @@ function AppTabs() {
           title: 'Blog',
           tabBarIcon: ({ color, size }) => (
             <MaterialIcons name="auto-stories" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarNavigator}
+        options={{
+          title: 'Calendar',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="calendar-month" size={size} color={color} />
           ),
         }}
       />

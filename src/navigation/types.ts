@@ -18,7 +18,13 @@ export type ProfileStackParamList = {
   CreateEditPost: { postId?: string; mode: 'create' | 'edit' };
 };
 
+export type CalendarStackParamList = {
+  CalendarHome: undefined;
+  PostDetail: { postId: string };
+};
+
 export type TabParamList = {
   FeedTab: undefined;
+  CalendarTab: undefined;
   ProfileTab: undefined;
 };
