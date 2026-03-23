@@ -9,6 +9,23 @@ dist/
 web-build/
 expo-env.d.ts
 
+ios/
+ios/build/
+ios/Pods/
+
+# Android 빌드 결과물만 무시
+android/.gradle/
+android/build/
+android/app/release/
+android/app/bin/
+android/app/build/
+android/captures/
+android/local.properties
+
+build/
+.idea/
+.gradle
+
 # Native
 .kotlin/
 *.orig.*
@@ -35,7 +52,3 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-# generated native folders
-/ios
-/android
