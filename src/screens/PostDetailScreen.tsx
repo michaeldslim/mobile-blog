@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Share,
   Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import { MarkdownContent } from '../components/MarkdownContent';
 import { TagPill } from '../components/TagPill';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
 import { spacing, fontSize, radius } from '../constants/theme';
 import { FeedStackParamList } from '../navigation/types';
 
@@ -68,12 +68,48 @@ export function PostDetailScreen({ route, navigation }: Props) {
   const handleShare = async () => {
     if (!blog) return;
     try {
-      await Share.share({
-        title: blog.title,
-        message: `Check out "${blog.title}"`,
-      });
+      const imageHtml = blog.imageUrl
+        ? `<img src="${blog.imageUrl}" style="width:100%;max-height:400px;object-fit:cover;border-radius:8px;margin-bottom:24px;" />`
+        : '';
+
+      const tagsHtml = blog.tags.length > 0
+        ? `<p style="margin-top:24px;">${blog.tags.map(t =>
+            `<span style="display:inline-block;background:#e2e8f0;border-radius:12px;padding:3px 10px;font-size:12px;margin-right:6px;color:#475569;">#${t}</span>`
+          ).join('')}</p>`
+        : '';
+
+      const contentHtml = blog.content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>');
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <style>
+              body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; padding: 0 24px; color: #1a1a1a; line-height: 1.7; }
+              h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+              .meta { color: #64748b; font-size: 13px; margin-bottom: 24px; }
+              .content { font-size: 16px; white-space: pre-wrap; }
+              .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <h1>${blog.title}</h1>
+            <p class="meta">${blog.authorName ? `by ${blog.authorName} &nbsp;&middot;&nbsp; ` : ''}${formattedDate}</p>
+            ${imageHtml}
+            <div class="content">${contentHtml}</div>
+            ${tagsHtml}
+            <p class="footer">The Async Journal</p>
+          </body>
+        </html>`;
+
+      await Print.printAsync({ html });
     } catch {
-      // User cancelled or share unavailable
+      // User cancelled or print unavailable
     }
   };
 
