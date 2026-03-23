@@ -126,7 +126,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
     marginBottom: spacing.xs,
-    textTransform: 'uppercase',
   },
   codeText: {
     fontSize: fontSize.xs,
