@@ -9,6 +9,7 @@ import {
   Alert,
   FlatList,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -23,14 +24,14 @@ import { EmptyState } from '../components/EmptyState';
 import { Blog, ThemeName } from '../types';
 import { spacing, fontSize, radius } from '../constants/theme';
 import { themes } from '../constants/theme';
-import { FeedStackParamList } from '../navigation/types';
+import { ProfileStackParamList } from '../navigation/types';
 
-type FeedNavProp = NativeStackNavigationProp<FeedStackParamList>;
+type ProfileNavProp = NativeStackNavigationProp<ProfileStackParamList>;
 
 export function ProfileScreen() {
   const { theme, themeName, setTheme, allThemes } = useTheme();
   const { user, isAdmin, session, signOut } = useAuth();
-  const navigation = useNavigation<FeedNavProp>();
+  const navigation = useNavigation<ProfileNavProp>();
   const { colors } = theme;
 
   const deleteMutation = useDeleteBlog(session?.access_token);
@@ -153,31 +154,44 @@ export function ProfileScreen() {
                   onPress={() => navigation.navigate('PostDetail', { postId: blog.id })}
                   activeOpacity={0.75}
                 >
-                  <View style={styles.myPostInfo}>
-                    <Text style={[styles.myPostTitle, { color: colors.foreground }]} numberOfLines={2}>
-                      {blog.title}
-                    </Text>
-                    <View style={[styles.statusPill, { backgroundColor: colors.muted }]}>
-                      <Text style={[styles.statusPillText, { color: colors.mutedForeground }]}>
-                        {blog.status}
-                      </Text>
+                  <View style={styles.myPostRow}>
+                    {/* Thumbnail */}
+                    {blog.imageUrl ? (
+                      <Image source={{ uri: blog.imageUrl }} style={styles.myPostThumb} />
+                    ) : (
+                      <View style={[styles.myPostThumb, styles.myPostThumbPlaceholder, { backgroundColor: colors.muted }]}>
+                        <MaterialIcons name="image-not-supported" size={20} color={colors.mutedForeground} />
+                      </View>
+                    )}
+                    {/* Content */}
+                    <View style={styles.myPostContent}>
+                      <View style={styles.myPostInfo}>
+                        <Text style={[styles.myPostTitle, { color: colors.foreground }]} numberOfLines={2}>
+                          {blog.title}
+                        </Text>
+                        <View style={[styles.statusPill, { backgroundColor: colors.muted }]}>
+                          <Text style={[styles.statusPillText, { color: colors.mutedForeground }]}>
+                            {blog.status}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.myPostActions}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            navigation.navigate('CreateEditPost', { postId: blog.id, mode: 'edit' })
+                          }
+                          style={[styles.actionBtn, { borderColor: colors.border }]}
+                        >
+                          <Text style={[styles.actionBtnText, { color: colors.foreground }]}>Edit</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleDeletePost(blog)}
+                          style={[styles.actionBtn, styles.deleteBtn, { borderColor: colors.destructive }]}
+                        >
+                          <Text style={[styles.actionBtnText, { color: colors.destructive }]}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
-                  <View style={styles.myPostActions}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        navigation.navigate('CreateEditPost', { postId: blog.id, mode: 'edit' })
-                      }
-                      style={[styles.actionBtn, { borderColor: colors.border }]}
-                    >
-                      <Text style={[styles.actionBtnText, { color: colors.foreground }]}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleDeletePost(blog)}
-                      style={[styles.actionBtn, styles.deleteBtn, { borderColor: colors.destructive }]}
-                    >
-                      <Text style={[styles.actionBtnText, { color: colors.destructive }]}>Delete</Text>
-                    </TouchableOpacity>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -304,6 +318,23 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     padding: spacing.md,
+  },
+  myPostRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'center',
+  },
+  myPostThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: radius.md,
+  },
+  myPostThumbPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  myPostContent: {
+    flex: 1,
     gap: spacing.sm,
   },
   myPostInfo: {

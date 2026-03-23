@@ -355,6 +355,7 @@ const styles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: 260,
+    borderRadius: radius.lg,
   },
   article: {
     padding: spacing.lg,

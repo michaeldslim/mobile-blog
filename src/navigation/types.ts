@@ -12,6 +12,12 @@ export type FeedStackParamList = {
   CreateEditPost: { postId?: string; mode: 'create' | 'edit' };
 };
 
+export type ProfileStackParamList = {
+  Profile: undefined;
+  PostDetail: { postId: string };
+  CreateEditPost: { postId?: string; mode: 'create' | 'edit' };
+};
+
 export type TabParamList = {
   FeedTab: undefined;
   ProfileTab: undefined;

@@ -46,6 +46,7 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
   const [status, setStatus] = useState<BlogStatus>('published');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -57,6 +58,7 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
       setTags(existingBlog.tags ?? []);
       setStatus(existingBlog.status);
       setImageUrl(existingBlog.imageUrl ?? null);
+      setImageRemoved(false);
     }
   }, [isEdit, existingBlog]);
 
@@ -75,6 +77,7 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
   const handleRemoveImage = () => {
     setImageUri(null);
     setImageUrl(null);
+    setImageRemoved(true);
   };
 
   // ─── Tags ───────────────────────────────────────────────────────────────────
@@ -122,10 +125,11 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
         setIsUploadingImage(true);
         finalImageUrl = await uploadBlogImage(imageUri);
         setIsUploadingImage(false);
-      } else if (imageUri === null && isEdit) {
-        // Image was explicitly removed
+      } else if (imageRemoved) {
+        // Image was explicitly removed by the user
         finalImageUrl = null;
       }
+      // else: no new image picked and not removed → keep existing imageUrl
 
       const pendingTags = tagInput.trim()
         ? [...tags, tagInput.trim().toLowerCase()]
@@ -386,7 +390,7 @@ const styles = StyleSheet.create({
   bodyInput: {
     fontSize: fontSize.base,
     lineHeight: 24,
-    minHeight: 240,
+    minHeight: 140,
     borderRadius: radius.lg,
     borderWidth: 1,
     padding: spacing.md,

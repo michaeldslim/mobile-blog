@@ -16,13 +16,14 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 
 // ─── Param Lists — re-exported from types.ts to avoid circular imports ───────
-export type { RootStackParamList, FeedStackParamList, TabParamList } from './types';
-import type { RootStackParamList, FeedStackParamList, TabParamList } from './types';
+export type { RootStackParamList, FeedStackParamList, ProfileStackParamList, TabParamList } from './types';
+import type { RootStackParamList, FeedStackParamList, ProfileStackParamList, TabParamList } from './types';
 
 // ─── Stack / Tab instances ────────────────────────────────────────────────────
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const FeedStack = createNativeStackNavigator<FeedStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const Tab = createBottomTabNavigator<TabParamList>();
 
 // ─── Feed Stack Navigator ─────────────────────────────────────────────────────
@@ -42,6 +43,26 @@ function FeedNavigator() {
       <FeedStack.Screen name="PostDetail" component={PostDetailScreen} />
       <FeedStack.Screen name="CreateEditPost" component={CreateEditPostScreen} />
     </FeedStack.Navigator>
+  );
+}
+
+// ─── Profile Stack Navigator ────────────────────────────────────────────────────
+
+function ProfileNavigator() {
+  const { theme } = useTheme();
+  const { colors } = theme;
+  return (
+    <ProfileStack.Navigator
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+        animation: 'slide_from_right',
+      }}
+    >
+      <ProfileStack.Screen name="Profile" component={ProfileScreen} />
+      <ProfileStack.Screen name="PostDetail" component={PostDetailScreen} />
+      <ProfileStack.Screen name="CreateEditPost" component={CreateEditPostScreen} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -77,7 +98,7 @@ function AppTabs() {
       />
       <Tab.Screen
         name="ProfileTab"
-        component={ProfileScreen}
+        component={ProfileNavigator}
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (

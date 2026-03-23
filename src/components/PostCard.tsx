@@ -127,9 +127,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: {
-    height: 200,
-    marginHorizontal: -spacing.lg,
-    alignSelf: 'stretch',
+    height: 140,
+    borderRadius: radius.lg,
   },
   body: {
     padding: spacing.lg,
