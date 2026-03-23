@@ -144,7 +144,7 @@ export function PostDetailScreen({ route, navigation }: Props) {
   })();
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Custom nav header */}
       <View style={[styles.navBar, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>

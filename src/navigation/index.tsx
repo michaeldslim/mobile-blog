@@ -82,6 +82,9 @@ function AppTabs() {
           borderTopColor: colors.border,
           borderTopWidth: 1,
         },
+        tabBarIconStyle: {
+          marginTop: 6,
+        },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
       }}
