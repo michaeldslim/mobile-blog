@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -39,9 +40,7 @@ export function LoginScreen() {
       >
         {/* Logo / Header */}
         <View style={styles.header}>
-          <View style={[styles.logoBox, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.logoText, { color: colors.primaryForeground }]}>Blog</Text>
-          </View>
+          <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
           <Text style={[styles.appName, { color: colors.foreground }]}>The Async Journal</Text>
         </View>
 
@@ -94,17 +93,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  logoBox: {
-    width: 72,
-    height: 72,
+  logoImage: {
+    width: 88,
+    height: 88,
     borderRadius: radius['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: spacing.sm,
-  },
-  logoText: {
-    fontSize: fontSize['2xl'],
-    fontWeight: '800',
   },
   appName: {
     fontSize: fontSize['3xl'],

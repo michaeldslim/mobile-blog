@@ -101,7 +101,8 @@ export function FeedScreen() {
         )}
       </View>
 
-      {/* Search Bar */}
+      {/* Search Bar — hidden when there are no posts and no active filter */}
+      {(isLoading || blogs.length > 0 || !!debouncedSearch || !!activeTag) && (
       <View style={[styles.searchRow, { borderBottomColor: colors.border }]}>
         <View style={[styles.searchBox, { backgroundColor: colors.input, borderColor: colors.border }]}>
           <Text style={{ color: colors.mutedForeground, marginRight: 6 }}>🔍</Text>
@@ -123,6 +124,7 @@ export function FeedScreen() {
           )}
         </View>
       </View>
+      )}
 
       {/* Active tag filter */}
       {activeTag && (
