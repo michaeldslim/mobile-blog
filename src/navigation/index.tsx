@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -70,7 +71,7 @@ function AppTabs() {
         options={{
           title: 'Blog',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size - 2, color }}>📰</Text>
+            <MaterialIcons name="auto-stories" size={size} color={color} />
           ),
         }}
       />
@@ -80,7 +81,7 @@ function AppTabs() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: size - 2, color }}>👤</Text>
+            <MaterialCommunityIcons name="account-circle-outline" size={size} color={color} />
           ),
         }}
       />
