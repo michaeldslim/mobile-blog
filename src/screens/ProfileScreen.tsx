@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   FlatList,
+  RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -78,7 +79,17 @@ export function ProfileScreen() {
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 8 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + insets.bottom + 8 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={colors.primary}
+          />
+        }
+      >
         {/* Profile Header */}
         <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {avatarUri ? (
