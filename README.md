@@ -30,8 +30,12 @@ A React Native / Expo mobile blog app built with Google OAuth, Supabase, GraphQL
 | Blog feed with infinite scroll | ✅ |
 | Full-text search with debounce (300ms) + clear button | ✅ |
 | Tag filtering | ✅ |
+| Sort options — Newest / Oldest / Most Liked | ✅ |
 | Image lightbox (tap to expand) | ✅ |
 | Like / Dislike toggle with AsyncStorage persistence | ✅ |
+| Post view count (DB-backed, `increment_blog_view_count` RPC) | ✅ |
+| Reading time estimate (words ÷ 200, min 1 min) | ✅ |
+| Related posts (tag-based, shown below reactions) | ✅ |
 | Create / Edit post (title, body, image, tags, status) | ✅ |
 | Delete post (with image cleanup from Storage) | ✅ |
 | Draft / Published status toggle | ✅ |
@@ -44,6 +48,8 @@ A React Native / Expo mobile blog app built with Google OAuth, Supabase, GraphQL
 | Admin override via `EXPO_PUBLIC_ADMIN_EMAILS` | ✅ |
 | Custom safe Markdown renderer | ✅ |
 | Profile screen (my posts, theme picker, sign out) | ✅ |
+| Pull-to-refresh on Profile screen | ✅ |
+| Offline banner (pure-JS connectivity check, no native module) | ✅ |
 
 ---
 
@@ -70,7 +76,7 @@ EXPO_PUBLIC_ADMIN_EMAILS=you@example.com
 
 #### 3.1 Database
 
-Create the `` table with pg_graphql rename annotations for clean camelCase GraphQL names:
+Create the `mobile_blogs` table with pg_graphql rename annotations for clean camelCase GraphQL names:
 
 ```sql
 create table mobile_blogs (
@@ -79,6 +85,7 @@ create table mobile_blogs (
   content text not null default '',
   likes_count integer not null default 0,
   dislikes_count integer not null default 0,
+  view_count integer not null default 0,
   image_url text,
   author_id text,
   author_name text,
@@ -89,6 +96,15 @@ create table mobile_blogs (
 );
 
 comment on table mobile_blogs is '@graphql({"name": "MobileBlog"})';
+```
+
+Also create the view count RPC function:
+
+```sql
+create or replace function increment_blog_view_count(post_id uuid)
+returns void as $$
+  update mobile_blogs set view_count = view_count + 1 where id = post_id;
+$$ language sql security definer;
 ```
 
 #### 3.2 RLS Policies
@@ -146,4 +162,6 @@ npm start        # Expo Go / dev build
 - **Image picker legacy mode:** `expo-image-picker` is configured with `legacy: true` in app.json to avoid the new UI that breaks on some Android versions.
 - **OAuth implicit flow:** The app uses Supabase's implicit OAuth flow (token in URL fragment). PKCE is not used. After redirect, the app parses the `#access_token=...` fragment from the deep link and calls `supabase.auth.setSession()`.
 - **Like/dislike persistence:** Likes and dislikes are stored in `AsyncStorage` on-device only — they do not write back to the database. The `likes_count` / `dislikes_count` columns in Supabase are not mutated by the app.
+- **View count:** Each post view increments `view_count` via the `increment_blog_view_count(post_id)` Supabase RPC (SQL function with `SECURITY DEFINER`). This bypasses RLS so unauthenticated views are counted. The count is read back via `supabase.from('mobile_blogs').select('view_count')` to avoid GraphQL schema cache issues.
+- **Offline banner:** Network connectivity is detected with a pure-JS polling fetch to `https://clients3.google.com/generate_204` every 5 seconds (3s abort timeout). No native module is used. The banner slides in from the top when offline and slides back out when connectivity is restored.
 - **PDF share:** The share button in PostDetailScreen calls `expo-print`'s `printAsync({ html })`. It builds a styled HTML document from the post content (title, author, date, body, tags, footer) and opens the Android system print dialog, which includes a "Save as PDF" option. `expo-print` is a JS-only package — it does **not** need an entry in the `plugins` array of app.json.
