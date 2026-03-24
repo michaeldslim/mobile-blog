@@ -39,6 +39,14 @@ export function FeedScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeTag, setActiveTag] = useState<string | undefined>();
 
+  type SortOption = 'newest' | 'oldest' | 'mostLiked';
+  const SORT_OPTIONS: { key: SortOption; label: string; orderBy: Record<string, string>[] }[] = [
+    { key: 'newest',    label: 'Newest',     orderBy: [{ createdAt: 'DescNullsLast' }] },
+    { key: 'oldest',    label: 'Oldest',     orderBy: [{ createdAt: 'AscNullsFirst' }] },
+    { key: 'mostLiked', label: 'Most Liked', orderBy: [{ likesCount: 'DescNullsLast' }] },
+  ];
+  const [activeSort, setActiveSort] = useState<SortOption>('newest');
+
   // Debounce search input
   const searchTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const handleSearchChange = (text: string) => {
@@ -58,6 +66,7 @@ export function FeedScreen() {
   } = useBlogs({
     search: debouncedSearch || undefined,
     tag: activeTag,
+    orderBy: SORT_OPTIONS.find((s) => s.key === activeSort)!.orderBy,
     accessToken: session?.access_token,
   });
 
@@ -134,6 +143,34 @@ export function FeedScreen() {
           <TouchableOpacity onPress={handleClearTag} style={styles.clearTag}>
             <Text style={[styles.clearTagText, { color: colors.mutedForeground }]}>✕ Clear</Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Sort options */}
+      {(isLoading || blogs.length > 0 || !!debouncedSearch || !!activeTag) && (
+        <View style={[styles.sortRow, { borderBottomColor: colors.border }]}>
+          {SORT_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.key}
+              style={[
+                styles.sortChip,
+                { borderColor: colors.border, backgroundColor: colors.card },
+                activeSort === opt.key && { backgroundColor: colors.primary, borderColor: colors.primary },
+              ]}
+              onPress={() => setActiveSort(opt.key)}
+              activeOpacity={0.75}
+            >
+              <Text
+                style={[
+                  styles.sortChipText,
+                  { color: colors.mutedForeground },
+                  activeSort === opt.key && { color: colors.primaryForeground },
+                ]}
+              >
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       )}
 
@@ -234,6 +271,24 @@ const styles = StyleSheet.create({
   },
   clearTagText: {
     fontSize: fontSize.sm,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  sortChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+  },
+  sortChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: '600',
   },
   listContent: {
     paddingTop: spacing.sm,

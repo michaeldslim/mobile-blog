@@ -35,13 +35,14 @@ export interface UseBlogsOptions {
   authorId?: string;
   accessToken?: string | null;
   enabled?: boolean;
+  orderBy?: Record<string, string>[];
 }
 
 export function useBlogs(options: UseBlogsOptions = {}) {
-  const { search, tag, allStatuses, authorId, accessToken, enabled } = options;
+  const { search, tag, allStatuses, authorId, accessToken, enabled, orderBy } = options;
 
   return useInfiniteQuery<GetBlogsResult, Error, InfiniteData<GetBlogsResult>, string[], string | null>({
-    queryKey: ['blogs', search ?? '', tag ?? '', allStatuses ? '1' : '0', authorId ?? ''],
+    queryKey: ['blogs', search ?? '', tag ?? '', allStatuses ? '1' : '0', authorId ?? '', JSON.stringify(orderBy ?? null)],
     enabled: enabled ?? true,
     queryFn: async ({ pageParam }) => {
       const client = createGraphQLClient(accessToken);
@@ -50,7 +51,7 @@ export function useBlogs(options: UseBlogsOptions = {}) {
         first: PAGE_SIZE,
         after: pageParam ?? null,
         filter,
-        orderBy: [{ createdAt: 'DescNullsLast' }],
+        orderBy: orderBy ?? [{ createdAt: 'DescNullsLast' }],
       });
     },
     initialPageParam: null,
