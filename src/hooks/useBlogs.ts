@@ -34,13 +34,15 @@ export interface UseBlogsOptions {
   allStatuses?: boolean;
   authorId?: string;
   accessToken?: string | null;
+  enabled?: boolean;
 }
 
 export function useBlogs(options: UseBlogsOptions = {}) {
-  const { search, tag, allStatuses, authorId, accessToken } = options;
+  const { search, tag, allStatuses, authorId, accessToken, enabled } = options;
 
   return useInfiniteQuery<GetBlogsResult, Error, InfiniteData<GetBlogsResult>, string[], string | null>({
     queryKey: ['blogs', search ?? '', tag ?? '', allStatuses ? '1' : '0', authorId ?? ''],
+    enabled: enabled ?? true,
     queryFn: async ({ pageParam }) => {
       const client = createGraphQLClient(accessToken);
       const filter = buildBlogsFilter({ search, tag, allStatuses, authorId });

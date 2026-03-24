@@ -14,7 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useBlog, useDeleteBlog, useLikeBlog, useVote } from '../hooks/useBlogs';
+import { useBlog, useBlogs, flattenBlogPages, useDeleteBlog, useLikeBlog, useVote } from '../hooks/useBlogs';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { TagPill } from '../components/TagPill';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -35,6 +35,15 @@ export function PostDetailScreen({ route, navigation }: Props) {
   const deleteMutation = useDeleteBlog(session?.access_token);
   const likeMutation = useLikeBlog(session?.access_token);
   const { data: userVote } = useVote(postId);
+
+  const relatedQuery = useBlogs({
+    tag: blog?.tags[0],
+    enabled: !!blog?.tags.length,
+    accessToken: session?.access_token,
+  });
+  const relatedBlogs = flattenBlogPages(relatedQuery.data)
+    .filter((p) => p.id !== postId)
+    .slice(0, 3);
 
   const [lightboxVisible, setLightboxVisible] = useState(false);
 
@@ -276,6 +285,42 @@ export function PostDetailScreen({ route, navigation }: Props) {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Related Posts */}
+          {relatedBlogs.length > 0 && (
+            <>
+              <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              <View style={styles.relatedSection}>
+                <Text style={[styles.relatedHeading, { color: colors.foreground }]}>Related Posts</Text>
+                {relatedBlogs.map((related) => (
+                  <TouchableOpacity
+                    key={related.id}
+                    style={[styles.relatedCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={() => navigation.push('PostDetail', { postId: related.id })}
+                    activeOpacity={0.75}
+                  >
+                    {related.imageUrl ? (
+                      <Image
+                        source={{ uri: related.imageUrl }}
+                        style={styles.relatedThumb}
+                        resizeMode="cover"
+                      />
+                    ) : null}
+                    <View style={styles.relatedContent}>
+                      <Text style={[styles.relatedPostTitle, { color: colors.foreground }]} numberOfLines={2}>
+                        {related.title}
+                      </Text>
+                      <Text style={[styles.relatedMeta, { color: colors.mutedForeground }]}>
+                        {related.authorName ?? 'Unknown'}
+                        {'  ·  '}
+                        {Math.max(1, Math.ceil(related.content.trim().split(/\s+/).filter(Boolean).length / 200))} min read
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -433,5 +478,40 @@ const styles = StyleSheet.create({
   lightboxImage: {
     width: '100%',
     height: '80%',
+  },
+  relatedSection: {
+    gap: spacing.sm,
+  },
+  relatedHeading: {
+    fontSize: fontSize.lg,
+    fontWeight: '700',
+  },
+  relatedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+    overflow: 'hidden',
+  },
+  relatedThumb: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.md,
+    flexShrink: 0,
+  },
+  relatedContent: {
+    flex: 1,
+    gap: 4,
+    justifyContent: 'center',
+  },
+  relatedPostTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  relatedMeta: {
+    fontSize: fontSize.xs,
   },
 });
