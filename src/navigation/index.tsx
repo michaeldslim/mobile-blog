@@ -15,6 +15,7 @@ import { CreateEditPostScreen } from '../screens/CreateEditPostScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { OfflineBanner } from '../components/OfflineBanner';
 
 // ─── Param Lists — re-exported from types.ts to avoid circular imports ───────
 export type { RootStackParamList, FeedStackParamList, ProfileStackParamList, CalendarStackParamList, TabParamList } from './types';
@@ -161,6 +162,7 @@ export function RootNavigator() {
           <RootStack.Screen name="Auth" component={LoginScreen} />
         )}
       </RootStack.Navigator>
+      <OfflineBanner />
     </NavigationContainer>
   );
 }
