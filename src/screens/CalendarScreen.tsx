@@ -23,7 +23,7 @@ import { CalendarStackParamList } from '../navigation/types';
 type CalendarNavProp = NativeStackNavigationProp<CalendarStackParamList>;
 
 export function CalendarScreen() {
-  const { theme } = useTheme();
+  const { theme, themeName } = useTheme();
   const { session } = useAuth();
   const { colors } = theme;
   const navigation = useNavigation<CalendarNavProp>();
@@ -132,6 +132,7 @@ export function CalendarScreen() {
         <LoadingSpinner fullScreen />
       ) : (
         <Calendar
+          key={themeName}
           style={styles.calendar}
           theme={{
             backgroundColor: colors.background,
