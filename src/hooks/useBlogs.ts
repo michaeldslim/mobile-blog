@@ -23,6 +23,7 @@ import {
   FetchBlogsParams,
 } from '../lib/graphql';
 import { deleteBlogImage } from '../lib/imageUpload';
+import { supabase } from '../lib/supabase';
 import { Blog, CreateBlogInput, UpdateBlogInput } from '../types';
 
 const PAGE_SIZE = 20;
@@ -294,5 +295,38 @@ export function useAllBlogsForCalendar(accessToken?: string | null) {
       lastPage.mobileBlogCollection.pageInfo.hasNextPage
         ? lastPage.mobileBlogCollection.pageInfo.endCursor
         : undefined,
+  });
+}
+
+// ─── View count ──────────────────────────────────────────────────────────────
+export function useViewCount(postId: string, _accessToken?: string | null) {
+  return useQuery<number>({
+    queryKey: ['viewCount', postId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mobile_blogs')
+        .select('view_count')
+        .eq('id', postId)
+        .single();
+      if (error) throw error;
+      return (data as any)?.view_count ?? 0;
+    },
+    enabled: !!postId,
+    staleTime: 30_000,
+  });
+}
+
+// ─── Increment view count ────────────────────────────────────────────────────
+export function useIncrementViewCount() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, { id: string }>({
+    mutationFn: async ({ id }) => {
+      const { error } = await supabase.rpc('increment_blog_view_count', { post_id: id });
+      if (error) throw error;
+    },
+    onSuccess: (_data, { id }) => {
+      // Refetch the view count from DB so we show the accurate server value
+      qc.invalidateQueries({ queryKey: ['viewCount', id] });
+    },
   });
 }

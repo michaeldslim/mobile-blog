@@ -70,7 +70,7 @@ EXPO_PUBLIC_ADMIN_EMAILS=you@example.com
 
 #### 3.1 Database
 
-Create the `mobile_blogs` table with pg_graphql rename annotations for clean camelCase GraphQL names:
+Create the `` table with pg_graphql rename annotations for clean camelCase GraphQL names:
 
 ```sql
 create table mobile_blogs (

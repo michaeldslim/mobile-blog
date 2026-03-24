@@ -14,7 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useBlog, useBlogs, flattenBlogPages, useDeleteBlog, useLikeBlog, useVote } from '../hooks/useBlogs';
+import { useBlog, useBlogs, flattenBlogPages, useDeleteBlog, useLikeBlog, useVote, useViewCount, useIncrementViewCount } from '../hooks/useBlogs';
 import { MarkdownContent } from '../components/MarkdownContent';
 import { TagPill } from '../components/TagPill';
 import { LoadingSpinner } from '../components/LoadingSpinner';
@@ -35,6 +35,16 @@ export function PostDetailScreen({ route, navigation }: Props) {
   const deleteMutation = useDeleteBlog(session?.access_token);
   const likeMutation = useLikeBlog(session?.access_token);
   const { data: userVote } = useVote(postId);
+  const { data: viewCount = 0 } = useViewCount(postId, session?.access_token);
+  const incrementView = useIncrementViewCount();
+
+  const hasIncremented = React.useRef(false);
+  React.useEffect(() => {
+    if (blog && !hasIncremented.current) {
+      hasIncremented.current = true;
+      incrementView.mutate({ id: blog.id });
+    }
+  }, [!!blog]);
 
   const relatedQuery = useBlogs({
     tag: blog?.tags[0],
@@ -241,6 +251,9 @@ export function PostDetailScreen({ route, navigation }: Props) {
             ) : null}
             <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
               {Math.max(1, Math.ceil(blog.content.trim().split(/\s+/).filter(Boolean).length / 200))} min read
+            </Text>
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+              👁️ {viewCount} {viewCount === 1 ? 'view' : 'views'}
             </Text>
           </View>
 

@@ -35,6 +35,19 @@ const BLOG_FIELDS = gql`
   }
 `;
 
+export const GET_VIEW_COUNT = gql`
+  query GetViewCount($id: UUID!) {
+    mobileBlogCollection(filter: { id: { eq: $id } }, first: 1) {
+      edges {
+        node {
+          id
+          viewCount
+        }
+      }
+    }
+  }
+`;
+
 // ─── Queries
 export const GET_BLOGS = gql`
   ${BLOG_FIELDS}
@@ -124,6 +137,20 @@ export const TOGGLE_LIKE = gql`
   }
 `;
 
+export const INCREMENT_VIEW_COUNT = gql`
+  mutation IncrementViewCount($id: UUID!, $count: Int!) {
+    updateMobileBlogCollection(
+      filter: { id: { eq: $id } }
+      set: { viewCount: $count }
+    ) {
+      records {
+        id
+        viewCount
+      }
+    }
+  }
+`;
+
 // ─── Helper types returned by queries
 export interface GetBlogsResult {
   mobileBlogCollection: BlogsConnection;
@@ -145,6 +172,14 @@ export interface UpdateBlogResult {
 
 export interface DeleteBlogResult {
   deleteFromMobileBlogCollection: { records: Array<{ id: string }> };
+}
+
+export interface IncrementViewCountResult {
+  updateMobileBlogCollection: { records: Array<{ id: string; viewCount: number }> };
+}
+
+export interface GetViewCountResult {
+  mobileBlogCollection: { edges: Array<{ node: { id: string; viewCount: number } }> };
 }
 
 // ─── Query variable builders
