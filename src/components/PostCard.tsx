@@ -30,6 +30,11 @@ export function PostCard({ blog, onPress, onTagPress }: PostCardProps) {
     }
   }, [blog.createdAt]);
 
+  const readingTime = React.useMemo(() => {
+    const words = blog.content.trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.ceil(words / 200));
+  }, [blog.content]);
+
   // Truncate content for preview (strip potential markdown)
   const preview = blog.content
     .replace(/```[\s\S]*?```/g, '[code]')
@@ -92,6 +97,10 @@ export function PostCard({ blog, onPress, onTagPress }: PostCardProps) {
             )}
             <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
               {formattedDate}
+            </Text>
+            <Text style={[styles.separator, { color: colors.border }]}>·</Text>
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+              {readingTime} min read
             </Text>
           </View>
 

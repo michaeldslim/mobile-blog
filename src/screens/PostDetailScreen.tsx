@@ -230,6 +230,9 @@ export function PostDetailScreen({ route, navigation }: Props) {
                 {formattedDate}
               </Text>
             ) : null}
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+              {Math.max(1, Math.ceil(blog.content.trim().split(/\s+/).filter(Boolean).length / 200))} min read
+            </Text>
           </View>
 
           {/* Divider */}
