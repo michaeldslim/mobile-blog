@@ -117,6 +117,7 @@ android {
             }
         }
     }
+    
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
