@@ -158,16 +158,15 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    gap: spacing.xs,
     marginTop: spacing.xs,
   },
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    flex: 1,
+    flexWrap: 'wrap',
   },
   metaText: {
     fontSize: fontSize.xs,
@@ -179,6 +178,7 @@ const styles = StyleSheet.create({
   likes: {
     flexDirection: 'row',
     gap: spacing.sm,
+    justifyContent: 'flex-end',
   },
   likeText: {
     fontSize: fontSize.xs,
