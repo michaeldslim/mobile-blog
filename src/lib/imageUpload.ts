@@ -27,8 +27,30 @@ export async function pickAndCompressImage(): Promise<ImageManipulator.ImageResu
   });
 
   if (result.canceled || !result.assets[0]) return null;
+  return compressAsset(result.assets[0]);
+}
 
-  const asset = result.assets[0];
+/**
+ * Opens the device camera, captures a photo, and compresses it.
+ * Returns null if the user cancels.
+ */
+export async function captureAndCompressImage(): Promise<ImageManipulator.ImageResult | null> {
+  const { status } = await ImagePicker.requestCameraPermissionsAsync();
+  if (status !== 'granted') {
+    throw new Error('Camera permission denied');
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: 'images',
+    allowsEditing: true,
+    quality: 1,
+  });
+
+  if (result.canceled || !result.assets[0]) return null;
+  return compressAsset(result.assets[0]);
+}
+
+async function compressAsset(asset: ImagePicker.ImagePickerAsset): Promise<ImageManipulator.ImageResult> {
   const { width, height } = asset;
 
   // Determine resize dimensions maintaining aspect ratio
@@ -44,13 +66,11 @@ export async function pickAndCompressImage(): Promise<ImageManipulator.ImageResu
     }
   }
 
-  const compressed = await ImageManipulator.manipulateAsync(
+  return ImageManipulator.manipulateAsync(
     asset.uri,
     [{ resize: { width: resizeWidth, height: resizeHeight } }],
     { compress: JPEG_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
   );
-
-  return compressed;
 }
 
 /**

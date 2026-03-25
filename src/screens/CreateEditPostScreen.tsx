@@ -18,7 +18,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useBlog, useCreateBlog, useUpdateBlog } from '../hooks/useBlogs';
-import { pickAndCompressImage, uploadBlogImage } from '../lib/imageUpload';
+import { pickAndCompressImage, captureAndCompressImage, uploadBlogImage } from '../lib/imageUpload';
 import { BlogStatus } from '../types';
 import { spacing, fontSize, radius } from '../constants/theme';
 import { FeedStackParamList } from '../navigation/types';
@@ -64,14 +64,34 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
 
   // ─── Image Picker ───────────────────────────────────────────────────────────
 
-  const handlePickImage = async () => {
-    try {
-      const compressed = await pickAndCompressImage();
-      if (!compressed) return;
-      setImageUri(compressed.uri);
-    } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Could not pick image');
-    }
+  const handlePickImage = () => {
+    Alert.alert('Add Image', 'Choose a source', [
+      {
+        text: '📷  Camera',
+        onPress: async () => {
+          try {
+            const compressed = await captureAndCompressImage();
+            if (!compressed) return;
+            setImageUri(compressed.uri);
+          } catch (err: any) {
+            Alert.alert('Error', err?.message ?? 'Could not open camera');
+          }
+        },
+      },
+      {
+        text: '🖼️  Gallery',
+        onPress: async () => {
+          try {
+            const compressed = await pickAndCompressImage();
+            if (!compressed) return;
+            setImageUri(compressed.uri);
+          } catch (err: any) {
+            Alert.alert('Error', err?.message ?? 'Could not pick image');
+          }
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handleRemoveImage = () => {
