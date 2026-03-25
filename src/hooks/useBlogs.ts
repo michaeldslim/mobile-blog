@@ -98,6 +98,7 @@ export function useCreateBlog(accessToken?: string | null) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['blogs'] });
+      qc.invalidateQueries({ queryKey: ['blogs-calendar'] });
     },
   });
 }
@@ -120,6 +121,7 @@ export function useUpdateBlog(accessToken?: string | null) {
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['blogs'] });
+      qc.invalidateQueries({ queryKey: ['blogs-calendar'] });
       qc.setQueryData(['blog', data.id], data);
     },
   });
@@ -137,6 +139,7 @@ export function useDeleteBlog(accessToken?: string | null) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['blogs'] });
+      qc.invalidateQueries({ queryKey: ['blogs-calendar'] });
     },
   });
 }
@@ -276,17 +279,22 @@ export function useLikeBlog(accessToken?: string | null) {
   });
 }
 
-// ─── All posts (minimal fields) for calendar view
-// Fetches all published posts in batches and resolves to a flat array.
-export function useAllBlogsForCalendar(accessToken?: string | null) {
+// ─── All posts for calendar view (current user's posts only)
+// Fetches all posts for the given author in batches and resolves to a flat array.
+export function useAllBlogsForCalendar(accessToken?: string | null, authorId?: string | null) {
   return useInfiniteQuery<GetBlogsResult, Error, InfiniteData<GetBlogsResult>, string[], string | null>({
-    queryKey: ['blogs-calendar'],
+    queryKey: ['blogs-calendar', authorId ?? ''],
     queryFn: async ({ pageParam }) => {
       const client = createGraphQLClient(accessToken);
+      // When authorId is present, show all of the user's own posts (any status).
+      // Without an authorId, fall back to published-only.
+      const filter = authorId
+        ? { authorId: { eq: authorId } }
+        : { status: { eq: 'published' } };
       return client.request<GetBlogsResult>(GET_BLOGS, {
         first: 200,
         after: pageParam ?? null,
-        filter: { status: { eq: 'published' } },
+        filter,
         orderBy: [{ createdAt: 'DescNullsLast' }],
       });
     },

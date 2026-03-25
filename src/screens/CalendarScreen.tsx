@@ -32,7 +32,7 @@ export function CalendarScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useAllBlogsForCalendar(session?.access_token);
+    useAllBlogsForCalendar(session?.access_token, session?.user?.id);
 
   // Auto-fetch all pages
   React.useEffect(() => {
@@ -43,11 +43,12 @@ export function CalendarScreen() {
 
   const allBlogs = flattenBlogPages(data);
 
-  // Build a map: "YYYY-MM-DD" -> Blog[]
+  // Build a map: "YYYY-MM-DD" (local date) -> Blog[]
   const dateMap = useMemo(() => {
     const map: Record<string, Blog[]> = {};
     for (const blog of allBlogs) {
-      const day = blog.createdAt.slice(0, 10); // "YYYY-MM-DD"
+      // Use the local-timezone date so the calendar day matches what the user sees
+      const day = format(parseISO(blog.createdAt), 'yyyy-MM-dd');
       if (!map[day]) map[day] = [];
       map[day].push(blog);
     }
@@ -205,6 +206,7 @@ export function CalendarScreen() {
           <TouchableOpacity
             style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]}
             activeOpacity={1}
+            onPress={() => {}}
           >
             {/* Sheet header */}
             <View style={[styles.sheetHeader, { borderBottomColor: colors.border }]}>
@@ -224,7 +226,7 @@ export function CalendarScreen() {
             <FlatList
               data={selectedPosts}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={{ paddingVertical: spacing.sm }}
+              contentContainerStyle={{ paddingTop: spacing.sm, paddingBottom: spacing.xl * 3 }}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.postItem, { borderBottomColor: colors.border }]}
