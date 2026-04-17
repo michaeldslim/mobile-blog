@@ -165,3 +165,51 @@ npm start        # Expo Go / dev build
 - **View count:** Each post view increments `view_count` via the `increment_blog_view_count(post_id)` Supabase RPC (SQL function with `SECURITY DEFINER`). This bypasses RLS so unauthenticated views are counted. The count is read back via `supabase.from('mobile_blogs').select('view_count')` to avoid GraphQL schema cache issues.
 - **Offline banner:** Network connectivity is detected with a pure-JS polling fetch to `https://clients3.google.com/generate_204` every 5 seconds (3s abort timeout). No native module is used. The banner slides in from the top when offline and slides back out when connectivity is restored.
 - **PDF share:** The share button in PostDetailScreen calls `expo-print`'s `printAsync({ html })`. It builds a styled HTML document from the post content (title, author, date, body, tags, footer) and opens the Android system print dialog, which includes a "Save as PDF" option. `expo-print` is a JS-only package — it does **not** need an entry in the `plugins` array of app.json.
+
+## EAS (Expo Application Services)
+
+This project uses **EAS Build** for cloud builds and **EAS Update** for over-the-air (OTA) JS updates.
+
+### Setup
+
+```bash
+# Install EAS CLI globally
+npm install -g eas-cli
+
+# Log in to your Expo account
+eas login
+
+# Link this project to EAS (first time only)
+eas init
+```
+
+### Build
+
+```bash
+# Build for production (Android AAB + iOS IPA)
+eas build --platform android --profile production
+eas build --platform ios --profile production
+
+# Build both platforms at once
+eas build --platform all --profile production
+```
+
+> Builds run on Expo's cloud servers. When complete, a download link for the `.aab` / `.ipa` is provided.
+
+### OTA Update (JS-only changes)
+
+Use this instead of a full store release when only JavaScript/assets changed.
+
+```bash
+# Push an OTA update to production
+eas update --channel production --message "Fix bug / update description"
+```
+
+> OTA updates are only delivered to devices whose `runtimeVersion` matches. A new binary build is required when native code changes.
+
+### Channels
+
+| Profile | Channel | Purpose |
+|---|---|---|
+| `development` | `development` | Dev client builds |
+| `production` | `production` | App Store / Play Store |
