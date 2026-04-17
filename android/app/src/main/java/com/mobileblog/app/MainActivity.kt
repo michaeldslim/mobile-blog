@@ -1,4 +1,4 @@
-package com.mobileblog.app
+package com.mike008.mobileblog
 
 import android.os.Build
 import android.os.Bundle

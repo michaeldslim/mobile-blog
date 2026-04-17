@@ -29,6 +29,7 @@
     "expo-print": "~55.0.9",
     "expo-secure-store": "^55.0.9",
     "expo-status-bar": "~55.0.4",
+    "expo-updates": "~55.0.20",
     "expo-web-browser": "^55.0.10",
     "graphql": "^16.13.1",
     "graphql-request": "^7.4.0",

@@ -8,6 +8,7 @@ node_modules/
 dist/
 web-build/
 expo-env.d.ts
+eas.json
 
 ios/
 ios/build/
@@ -52,3 +53,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# EAS (contains env secrets)
+eas.json

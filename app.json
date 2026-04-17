@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "The Async Journal",
-    "slug": "mobile-blog",
+    "slug": "mobileblog",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "scheme": "mobile-blog",
+    "scheme": "mobileblog",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mobileblog.app"
+      "bundleIdentifier": "com.mike008.mobileblog"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +24,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "package": "com.mobileblog.app",
+      "package": "com.mike008.mobileblog",
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -39,6 +39,16 @@
           "cameraPermission": "Allow Mobile Blog to use your camera to take post images."
         }
       ]
-    ]
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/d625b47b-121e-48a0-8d39-12a93f8456cb"
+    },
+    "runtimeVersion": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "d625b47b-121e-48a0-8d39-12a93f8456cb"
+      }
+    },
+    "owner": "mike008"
   }
 }

@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.mobileblog.app'
+    namespace 'com.mike008.mobileblog'
     defaultConfig {
-        applicationId 'com.mobileblog.app'
+        applicationId 'com.mike008.mobileblog'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

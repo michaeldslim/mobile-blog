@@ -1,4 +1,4 @@
-package com.mobileblog.app
+package com.mike008.mobileblog
 
 import android.app.Application
 import android.content.res.Configuration
