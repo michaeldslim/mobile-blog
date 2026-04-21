@@ -127,6 +127,16 @@ export function CalendarScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Calendar</Text>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[
+            styles.closeChip,
+            { backgroundColor: colors.primary, borderColor: colors.border },
+          ]}
+          activeOpacity={0.8}
+        >
+          <Text style={[styles.closeChipText, { color: colors.primaryForeground }]}>Close</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -264,11 +274,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   headerTitle: {
     fontSize: fontSize.xl,
     fontWeight: '800',
     letterSpacing: -0.5,
+  },
+  closeChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeChipText: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
   },
   calendar: {
     marginTop: spacing.sm,
