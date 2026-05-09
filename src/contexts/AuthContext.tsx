@@ -3,6 +3,7 @@ import { Linking } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../lib/supabase';
+import { registerPushToken, unregisterPushToken } from '../lib/notifications';
 
 // Required for expo-web-browser auth session completion (iOS + Android)
 WebBrowser.maybeCompleteAuthSession();
@@ -82,6 +83,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      if (newSession?.user) {
+        registerPushToken(newSession.user.id).catch((err) =>
+          console.error('[Push] registerPushToken failed:', err)
+        );
+      }
     });
 
     // Android: fires when the deep link brings the app to foreground during auth
@@ -128,6 +134,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (session?.user?.id) {
+      await unregisterPushToken(session.user.id).catch((err) =>
+        console.error('[Push] unregisterPushToken failed:', err)
+      );
+    }
     await supabase.auth.signOut();
   };
 

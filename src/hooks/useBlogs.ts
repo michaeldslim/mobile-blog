@@ -23,6 +23,7 @@ import {
   FetchBlogsParams,
 } from '../lib/graphql';
 import { deleteBlogImage } from '../lib/imageUpload';
+import { sendNewPostNotification } from '../lib/notifications';
 import { supabase } from '../lib/supabase';
 import { Blog, CreateBlogInput, UpdateBlogInput } from '../types';
 
@@ -96,9 +97,12 @@ export function useCreateBlog(accessToken?: string | null) {
       if (!record) throw new Error('Blog creation returned no record');
       return record;
     },
-    onSuccess: () => {
+    onSuccess: (blog) => {
       qc.invalidateQueries({ queryKey: ['blogs'] });
       qc.invalidateQueries({ queryKey: ['blogs-calendar'] });
+      if (blog.status === 'published') {
+        sendNewPostNotification(blog, accessToken).catch(() => {});
+      }
     },
   });
 }
