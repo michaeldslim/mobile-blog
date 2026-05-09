@@ -22,6 +22,7 @@ android/app/bin/
 android/app/build/
 android/captures/
 android/local.properties
+android/app/google-services.json
 
 build/
 .idea/
