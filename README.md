@@ -107,16 +107,6 @@ npm start        # Expo Go / dev build
 
 ---
 
-## Notes
-
-- **Image upload on Android:** `expo-file-system/legacy` is required to read files as base64 on Android. The standard `expo-file-system` import does not expose `readAsStringAsync`.
-- **Image picker legacy mode:** `expo-image-picker` is configured with `legacy: true` in app.json to avoid the new UI that breaks on some Android versions.
-- **OAuth implicit flow:** The app uses Supabase's implicit OAuth flow (token in URL fragment). PKCE is not used. After redirect, the app parses the `#access_token=...` fragment from the deep link and calls `supabase.auth.setSession()`.
-- **Like/dislike persistence:** Likes and dislikes are stored in `AsyncStorage` on-device only — they do not write back to the database. The `likes_count` / `dislikes_count` columns in Supabase are not mutated by the app.
-- **View count:** Each post view increments `view_count` via the `increment_blog_view_count(post_id)` Supabase RPC (SQL function with `SECURITY DEFINER`). This bypasses RLS so unauthenticated views are counted. The count is read back via `supabase.from('mobile_blogs').select('view_count')` to avoid GraphQL schema cache issues.
-- **Offline banner:** Network connectivity is detected with a pure-JS polling fetch to `https://clients3.google.com/generate_204` every 5 seconds (3s abort timeout). No native module is used. The banner slides in from the top when offline and slides back out when connectivity is restored.
-- **PDF share:** The share button in PostDetailScreen calls `expo-print`'s `printAsync({ html })`. It builds a styled HTML document from the post content (title, author, date, body, tags, footer) and opens the Android system print dialog, which includes a "Save as PDF" option. `expo-print` is a JS-only package — it does **not** need an entry in the `plugins` array of app.json.
-
 ## EAS (Expo Application Services)
 
 This project uses **EAS Build** for cloud builds and **EAS Update** for over-the-air (OTA) JS updates.
