@@ -4,37 +4,6 @@ A React Native / Expo mobile blog app built with Google OAuth, Supabase, GraphQL
 
 ---
 
-## Features
-
-| Feature | Status |
-|---|---|
-| Google OAuth login (implicit flow via Supabase) | ✅ |
-| Blog feed with infinite scroll | ✅ |
-| Full-text search with debounce (300ms) + clear button | ✅ |
-| Tag filtering | ✅ |
-| Sort options — Newest / Oldest / Most Liked | ✅ |
-| Image lightbox (tap to expand) | ✅ |
-| Like / Dislike toggle with AsyncStorage persistence | ✅ |
-| Post view count (DB-backed, `increment_blog_view_count` RPC) | ✅ |
-| Reading time estimate (words ÷ 200, min 1 min) | ✅ |
-| Related posts (tag-based, shown below reactions) | ✅ |
-| Create / Edit post (title, body, image, tags, status) | ✅ |
-| Delete post (with image cleanup from Storage) | ✅ |
-| Draft / Published status toggle | ✅ |
-| Image upload (compress → base64 → Supabase Storage) | ✅ |
-| Post detail — title → body → image → tags → date | ✅ |
-| Feed cards — title → preview → image → tags → date | ✅ |
-| Share post as PDF via system print dialog | ✅ |
-| 3-theme switcher (persisted) | ✅ |
-| Author-based access control | ✅ |
-| Admin override via `EXPO_PUBLIC_ADMIN_EMAILS` | ✅ |
-| Custom safe Markdown renderer | ✅ |
-| Profile screen (my posts, theme picker, sign out) | ✅ |
-| Pull-to-refresh on Profile screen | ✅ |
-| Offline banner (pure-JS connectivity check, no native module) | ✅ |
-
----
-
 ## Setup
 
 ### 1. Clone & install
