@@ -4,24 +4,6 @@ A React Native / Expo mobile blog app built with Google OAuth, Supabase, GraphQL
 
 ---
 
-## Tech Stack
-
-| Layer | Library |
-|---|---|
-| Framework | Expo SDK 55 (blank TypeScript) |
-| Navigation | React Navigation 7 — bottom tabs + native stack |
-| Auth | Supabase Google OAuth (implicit flow) + `expo-web-browser` |
-| Database | Supabase `mobile_blogs` table via `pg_graphql` |
-| Data fetching | TanStack Query v5 — infinite scroll, mutations, optimistic updates |
-| GraphQL client | `graphql-request` |
-| Storage | Supabase Storage (`blog-images` bucket) |
-| Image handling | `expo-image-picker` (legacy mode) + `expo-image-manipulator` + `expo-file-system` |
-| PDF generation | `expo-print` — renders post as HTML → system print/PDF dialog |
-| Session persistence | `@react-native-async-storage/async-storage` |
-| Themes | 3 built-in — Dark Green (default), Dark Teal, Light Neutral |
-
----
-
 ## Features
 
 | Feature | Status |
