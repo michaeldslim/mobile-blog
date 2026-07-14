@@ -2,7 +2,7 @@
   "expo": {
     "name": "The Async Journal",
     "slug": "mobileblog",
-    "version": "1.0.0",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -43,7 +43,7 @@
     "updates": {
       "url": "https://u.expo.dev/d625b47b-121e-48a0-8d39-12a93f8456cb"
     },
-    "runtimeVersion": "1.0.0",
+    "runtimeVersion": "2.1.0",
     "extra": {
       "eas": {
         "projectId": "d625b47b-121e-48a0-8d39-12a93f8456cb"
