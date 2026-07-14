@@ -1,6 +1,8 @@
 # The Async Journal
 
-A React Native / Expo mobile blog app built with Google OAuth, Supabase, GraphQL, and TanStack Query.
+A React Native / Expo mobile journal for writing, reading, and browsing posts. Sign in with Google via Supabase Auth, then publish Markdown entries with images and tags, browse a searchable feed, explore posts on a calendar, and manage drafts from your profile.
+
+**Stack:** Supabase (Postgres + pg_graphql, Storage, RLS), TanStack Query, React Navigation, and EAS Build/Update for production releases and OTA updates.
 
 ---
 
