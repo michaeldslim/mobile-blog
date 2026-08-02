@@ -93,11 +93,15 @@ Add policies: `SELECT` for everyone, `INSERT/UPDATE/DELETE` for authenticated us
 
 In Supabase → Authentication → Providers → Google:
 - Enable Google provider, add Client ID and Secret
-- Add `https://your-project.supabase.co/auth/v1/callback` to Google Cloud OAuth allowed redirects
-- Add `mobile-blog://auth/callback` to Google Cloud OAuth allowed redirects
-- Add your Google account email to **Test users** in Google Cloud Console (while app is in testing)
 
-In [app.json](app.json), the deep link scheme is already configured as `mobile-blog`.
+In Supabase → Authentication → URL Configuration:
+- Add `mobile-blog://auth/callback` to **Redirect URLs**
+
+In Google Cloud Console → OAuth client → Authorized redirect URIs:
+- Add `https://your-project.supabase.co/auth/v1/callback`
+- Add your Google account email to **Test users** (while app is in testing)
+
+In [app.json](app.json), the deep link scheme is configured as `mobile-blog` (must match `src/constants/auth.ts`).
 
 ### 4. Run
 
