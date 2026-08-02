@@ -1,0 +1,233 @@
+---
+description: Incremental git commits — small chunks, user approves each commit
+alwaysApply: true
+---
+
+# Git Commit Workflow
+
+## Never commit everything at once
+
+- Do **not** stage or commit all modified files in a single commit.
+- Split work into **small, logical commits** (one concern per commit when possible).
+- Leave unrelated or follow-up changes **unstaged** until their turn.
+
+## When to propose a commit
+
+Propose a commit only when a **coherent slice** is done, for example:
+
+- One new file or module (e.g. `app/theme/themes.ts` only)
+- One refactor step (e.g. migrate `NoteList` strings only)
+- One bug fix or one feature sub-step from the plan
+
+If the slice is still mid-edit or mixes unrelated changes, **do not** propose a commit yet.
+
+## Always ask before committing
+
+- **Never** run `git add` / `git commit` unless the user explicitly says to commit (in this message or after you ask).
+- When a slice looks ready, **stop and ask** using the [proposal format](#proposal-format-commit-and-push) below — include **copy-paste-ready commands**, not just the message.
+- The user decides yes or no; wait for their answer before any git write commands (unless they run the commands themselves).
+- If they decline, continue work or offer a smaller slice.
+
+### Proposal format (commit and push)
+
+Every commit or push proposal must include:
+
+1. **Summary** — what changed, file count, ~lines changed
+2. **Proposed message** (commits only) — full `type: subject` line
+3. **Commands** — exact shell commands the user can run (or approve for the agent to run)
+
+**Commit proposal example**
+
+> Ready to commit i18n scaffold (**4 files**, ~120 lines)?
+>
+> **Message:** `feat: add i18n scaffold with expo-localization and en/ko/ja locale files`
+>
+> ```bash
+> git add src/i18n/index.ts src/i18n/locales/en.json src/i18n/locales/ko.json src/i18n/locales/ja.json
+> git status
+> git diff --staged
+> git commit -m "feat: add i18n scaffold with expo-localization and en/ko/ja locale files"
+> ```
+>
+> Commit now? (you can run the commands above, or ask me to run them)
+
+**Push proposal on `main`**
+
+> **3 commits** ahead of `origin/main`, typecheck clean. Push now?
+>
+> ```bash
+> git status
+> git log origin/main..HEAD --oneline
+> git push origin main
+> ```
+>
+> First push on `main` (no upstream yet): use `git push -u origin main` instead.
+
+**Push proposal on a feature branch** (e.g. `feature/i18n`)
+
+> **2 commits** ahead of `origin/feature/i18n`. Push now?
+>
+> ```bash
+> git status
+> git branch --show-current
+> git log origin/feature/i18n..HEAD --oneline
+> git push
+> ```
+>
+> First push on a new branch: use `git push -u origin feature/i18n` instead of `git push`.
+
+- List **every file path** in `git add` — never `git add .` in the proposed commands.
+- For multi-line commit bodies, show `git commit -m "subject" -m "body line"` or a HEREDOC in the command block.
+- Pick push command from [branch type](#push-commands-by-branch) below; always show the **current branch name** in the proposal.
+
+## How to stage (partial commits)
+
+```bash
+# Stage only files for this slice
+git add src/i18n/index.ts src/i18n/locales/en.json
+
+# Verify what will be committed
+git status
+git diff --staged
+```
+
+- Prefer **explicit file paths** over `git add .` or `git add -A`.
+- One commit = one logical change; keep the diff small and reviewable.
+
+## Max files per commit
+
+Use **file count** and **diff size** together — logical slice wins over a hard number.
+
+| Guideline | Rule |
+|-----------|------|
+| **Target** | **1–5 files** per commit |
+| **Soft max** | **6 files** — split into a smaller slice if you can |
+| **Hard max** | **8 files** — do not propose a commit above this unless files are inseparable (e.g. `package.json` + `package-lock.json`, or a type + its only consumer) |
+| **Line budget** | Prefer **≤ ~250 lines** changed (add + delete). Above **~400 lines**, split or ask the user before proposing |
+
+**Split examples**
+
+- `src/i18n/` init (3 files) → commit; `HomeScreen` migration (1 file) → separate commit
+- Do not combine `package.json` dependency bump with unrelated UI changes in one commit
+
+When proposing a commit, state **file count** and **approx. lines changed** so the user can judge size.
+
+## Commit message format
+
+Use **Conventional Commits**: every message starts with exactly one **type prefix** from the table below.
+
+### Template
+
+```
+<type>: <concise summary in imperative mood>
+
+[Optional body: extra context, scope, or user-visible effect.]
+```
+
+### Type prefix (pick one)
+
+| Prefix | Use when |
+|--------|----------|
+| `feat:` | Introduces a new feature or user-facing capability |
+| `fix:` | Patches a bug or broken behavior |
+| `docs:` | Documentation only (README, plan, comments in docs) |
+| `style:` | Formatting, whitespace, semicolons — no logic change |
+| `refactor:` | Rewrites or reorganizes code — no new feature, no bug fix |
+| `perf:` | Targeted change to improve performance |
+| `test:` | Adds or updates tests |
+| `chore:` | Build, tooling, config, or dependency updates |
+
+### Rules
+
+- **Required**: start with `<type>: ` (lowercase type, colon, single space)
+- **Subject**: imperative, lowercase start after the prefix, **≤ 72 characters** total when possible; no period at the end of the subject line
+- **Body**: optional; blank line after subject for a second paragraph if needed
+- **Scope**: one commit = one concern (matches the file slice); pick the prefix that best fits the *primary* change
+- **Language**: English for commit messages (UI copy may stay ko/en/ja in code)
+- **Do not**: paste file lists, `git status` output, or “WIP” / “misc” / “various fixes”
+- **Split mixed types**: e.g. `chore:` bump deps in one commit, `feat:` UI change in another — do not combine under one prefix
+
+### Examples
+
+```
+feat: add i18n scaffold with expo-localization and en/ko/ja locale files
+```
+
+```
+refactor: migrate HomeScreen strings to useTranslation
+```
+
+```
+fix: use locale-aware Intl formatting in formatRateDate
+```
+
+```
+chore: add expo-localization and i18next dependencies
+```
+
+```
+docs: add localization plan to currency-converter rules
+```
+
+When asking to commit, include the **proposed message** and the full **git add** / **git commit** command block.
+
+When asking to push, include the full **git push** command block (and `git status` / `git log` for context).
+
+## Push workflow
+
+**Do not push after every commit by default.** Commits are local checkpoints; push when it makes sense to back up or share work.
+
+### Push commands (by branch)
+
+Use **different commands** depending on which branch you are on:
+
+| Branch | First push (no upstream) | Regular push |
+|--------|--------------------------|--------------|
+| **`main`** | `git push -u origin main` | `git push origin main` |
+| **Feature branch** (e.g. `feature/i18n`) | `git push -u origin <branch>` | `git push` |
+
+**Why the split?**
+
+- On **`main`**: explicit `git push origin main` — you always see remote + branch (your habit).
+- On a **feature branch**: after `-u`, plain **`git push`** pushes the **current** branch only — safer than typing a branch name and avoids ever pushing `main` by mistake while on `feature/...`.
+
+Explicit `git push origin <branch>` on a feature branch is also fine if you prefer; default proposal uses `git push` when not on `main`.
+
+### When to push (recommended)
+
+| Situation | Push? |
+|-----------|-------|
+| After **1–3 related commits** that form a stable slice (builds, typechecks) | **Good default** — backs up without noise |
+| **End of a work session** | **Yes** — avoid losing local-only work |
+| After a **single tiny commit** (e.g. one-line fix) | **Optional** — fine if you want remote backup immediately |
+| Mid-feature, code **broken or half-migrated** | **No** — finish the slice or stay local until green |
+| Before opening a **PR** or asking for review | **Yes** |
+
+### Rules (same as commit: you decide)
+
+- **Never** run `git push` unless you explicitly ask (same approval model as commits).
+- When suggesting a push, use the [proposal format](#proposal-format-commit-and-push) — check **current branch** first (`git branch --show-current`), then propose the matching command from the table above.
+- **`-u` only once** per branch (first push); do not repeat `-u` on every push.
+- **Never** force-push `main` / `master` unless you explicitly request it.
+
+### Practical rhythm for this project
+
+1. Make several **small approved commits** on `main` or a feature branch.
+2. When the slice is **stable** (`npm run typecheck` passes), **ask once** to push with the right command for that branch.
+3. Or push at **session end** whatever is committed and green.
+
+Pushing every commit is safe but creates a noisy remote history and many CI runs if CI exists; batching **2–4 related commits** before push is usually the sweet spot for a solo app repo.
+
+## During multi-step tasks
+
+1. Complete one slice → summarize what changed → **ask** to commit with **commands**.
+2. After a commit (if approved), move to the next slice.
+3. After **2–3 related commits** or a stable milestone, **ask** to push with **commands** (do not push automatically).
+4. At the end of a task, **do not** auto-commit remaining files; list what is left uncommitted and ask per slice if needed.
+
+## Do not
+
+- Batch an entire feature (e.g. full localization) into one commit.
+- Commit without the user’s explicit approval.
+- Push without the user’s explicit approval.
+- Force-push `main` / `master` without explicit request.
