@@ -1,0 +1,173 @@
+---
+description: Mobile Blog improvement roadmap — UI, logic, and infra fixes identified from codebase audit
+alwaysApply: false
+---
+
+# The Async Journal — Improvement Plan
+
+Audit date: 2026-08-01. Prioritized backlog for UI polish, logic correctness, and tech debt.
+
+---
+
+## P0 — Critical bugs (fix first)
+
+### 1. OAuth deep-link scheme mismatch — DONE
+- Aligned `app.json` scheme to `mobile-blog` (matches `AndroidManifest.xml` and `src/constants/auth.ts`).
+- Auth hardened: PKCE `exchangeCodeForSession`, implicit-token fallback, `Linking.getInitialURL` cold start, `__DEV__` logging.
+- README updated with Supabase Redirect URLs step.
+
+### 2. Like/dislike updates blocked by RLS for non-authors
+- `useLikeBlog` calls `updateMobileBlogCollection` to change `likesCount` / `dislikesCount`.
+- RLS only allows UPDATE when `auth.uid()::text = author_id` (post owner).
+- Non-owner votes will fail silently or show optimistic UI then roll back.
+- **Fix (choose one):**
+  - Add a `security definer` RPC `increment_blog_reaction(post_id, delta_likes, delta_dislikes)` callable by authenticated users, OR
+  - Add a separate `blog_reactions` table keyed by `(user_id, post_id)` with server-side count aggregation, OR
+  - Relax RLS with a narrow policy allowing only reaction columns to be updated by any authenticated user.
+- **Files:** Supabase SQL migration, `src/hooks/useBlogs.ts`, `src/lib/graphql.ts`
+
+### 3. README schema out of sync with GraphQL types
+- README `mobile_blogs` DDL is missing columns the app queries: `shortCode`, `isGood`, `publishedAt`, `viewCount`.
+- Fresh Supabase setup from README will cause GraphQL errors.
+- **Fix:** Update README SQL to match production schema (or remove unused fields from `BLOG_FIELDS` fragment and `Blog` type).
+- **Files:** `README.md`, `src/lib/graphql.ts`, `src/types/index.ts`
+
+### 4. Image upload double path prefix
+- `uploadBlogImage` uploads to path `blog-images/${filename}` inside bucket `blog-images` → object key `blog-images/…`.
+- `deleteBlogImage` strip logic may not match actual stored path.
+- **Fix:** Use `filename` only as the storage object key (no nested `blog-images/` prefix).
+- **Files:** `src/lib/imageUpload.ts`
+
+---
+
+## P1 — Logic improvements
+
+### 5. Client-only vote state is gameable
+- Votes stored in AsyncStorage (`vote:<postId>`), not tied to user account or server.
+- Clearing app data allows unlimited re-votes; counts drift across devices.
+- **Fix:** Pair with P0 #2 — persist votes server-side per `user_id + post_id`.
+
+### 6. View count uses mixed APIs
+- `useViewCount` reads via Supabase REST; `useIncrementViewCount` uses RPC; `GET_VIEW_COUNT` GraphQL query exists but is unused.
+- **Fix:** Standardize on GraphQL or RPC for both read and write; remove dead `GET_VIEW_COUNT` / `INCREMENT_VIEW_COUNT` gql if unused.
+
+### 7. Profile "My Posts" has no pagination
+- `ProfileScreen` uses `useBlogs` (infinite query) but never calls `fetchNextPage`.
+- Users with 20+ posts only see the first page.
+- **Fix:** Add `onEndReached` + footer loader, or a dedicated `useMyPosts` hook with explicit page size.
+
+### 8. Calendar fetches all pages on mount
+- `useEffect` loops `fetchNextPage` until exhausted — fine for small datasets, costly for large journals.
+- **Fix:** Server-side date-range filter or a lightweight `created_at` aggregation query instead of loading every post.
+
+### 9. Create/Edit missing loading guard in edit mode
+- Form renders empty until `existingBlog` loads; user can tap Publish before data arrives.
+- **Fix:** Show `LoadingSpinner` while `isEdit && !existingBlog`; disable save until loaded.
+
+### 10. `scheduled` status in types but not in UI
+- `BlogStatus` includes `'scheduled'`; editor only toggles draft/published.
+- **Fix:** Either remove from types or add scheduled-date picker + publish-at logic.
+
+### 11. PostDetail view increment effect
+- `useEffect(..., [!!blog])` is fragile; re-runs if blog object identity changes.
+- **Fix:** `useEffect(() => { … }, [blog?.id])` with ref guard on `postId`.
+
+---
+
+## P2 — UI improvements
+
+### 12. Post detail content order
+- Current: title → markdown body → hero image → tags → meta.
+- Expected blog layout: title → meta → hero image → body → tags.
+- **File:** `src/screens/PostDetailScreen.tsx`
+
+### 13. Calendar "Close" button is a no-op
+- `CalendarScreen` is a tab root; `navigation.goBack()` does nothing useful.
+- **Fix:** Remove the Close chip, or replace with "Today" jump / month picker.
+
+### 14. Feed hides search when empty
+- Search/sort hidden when `blogs.length === 0` and no active filter — new installs see bare empty state.
+- **Fix:** Always show search bar; only hide sort chips when truly irrelevant.
+
+### 15. Markdown editor promise vs reality
+- Label says "Markdown supported"; `MarkdownContent` only renders fenced code blocks — no bold, italic, headings, links.
+- **Fix (pick one):**
+  - Implement inline parsing in `renderInlineText` (headings, `**bold**`, `*italic*`, links), OR
+  - Add `react-native-markdown-display` and remove custom parser, OR
+  - Soften label to "Plain text + code blocks".
+
+### 16. Inconsistent iconography
+- Mix of emoji (🔍 👍 👎 👁️) and `@expo/vector-icons`.
+- **Fix:** Replace emoji with MaterialIcons for visual consistency and accessibility.
+
+### 17. OfflineBanner ignores theme and safe area
+- Hardcoded `#EF4444`, `top: 0` — overlaps status bar on notched devices.
+- **Fix:** Use `useSafeAreaInsets()`, theme `destructive` color, green tint for "Back online".
+
+### 18. Tab bar accessibility
+- `tabBarShowLabel: false` — screen readers get icon-only tabs.
+- **Fix:** Enable labels or add `tabBarAccessibilityLabel` per tab.
+
+### 19. PostCard image placement
+- Feed cards show title + preview text before image; hero image usually leads for visual scanning.
+- **Fix:** Move image above preview text (match detail screen after P2 #12).
+
+### 20. Login screen polish
+- Google button uses text "G" instead of official icon; unused styles (`tagline`, `disclaimer`).
+- **Fix:** Use `MaterialCommunityIcons` `google` or SVG asset; remove dead styles.
+
+### 21. Light theme contrast on primary buttons
+- `light-neutral` primary is `#1f2937` (dark gray) — fine, but verify WCAG on muted text (`#6b7280` on white).
+
+---
+
+## P3 — Tech debt & cleanup
+
+### 22. Unused dependencies
+Remove or wire up:
+- `zustand` — not imported anywhere
+- `expo-clipboard` — not used (consider for share/copy link)
+- `react-native-vector-icons` — app uses `@expo/vector-icons` only
+- `react-native-toast-message` — in `package.json` but no `<Toast />` in `App.tsx`
+
+### 23. Dead code
+- `CalendarScreen.renderDayContent` — defined, never used
+- `ProfileScreen` unused imports: `FlatList`, `PostCard`, `themes`, `ThemeName`, `Blog` (verify before removing)
+- `TOGGLE_LIKE` gql export — superseded by inline mutation in `useLikeBlog`
+
+### 24. Shared screen duplication
+- `PostDetailScreen` and `CreateEditPostScreen` duplicated across Feed/Profile stacks (intentional for independent nav), but type imports only reference `FeedStackParamList`.
+- **Fix:** Extract shared param type or use a composite navigator to reduce duplicate stack registration.
+
+### 25. Error handling UX
+- No React error boundary; network failures mostly `Alert.alert`.
+- **Fix:** Add error boundary + Toast for non-blocking feedback; retry buttons on failed queries.
+
+### 26. `console.log` in production auth flow
+- `AuthContext` logs redirect URL slice — remove or gate behind `__DEV__`.
+
+### 27. README inaccuracies
+- Scheme documentation wrong (see P0 #1).
+- Storage bucket policies section is vague — add example SQL policies.
+
+---
+
+## Suggested implementation order
+
+```
+Week 1: P0 #1–4 (auth, RLS/reactions, schema docs, image paths)
+Week 2: P1 #5–8 (server votes, API consistency, pagination)
+Week 3: P2 #12–17 (layout, markdown, icons, offline banner)
+Backlog: P2 #18–21, P3
+```
+
+---
+
+## Quick wins (< 1 hour each)
+
+1. Align `app.json` scheme with `mobile-blog`
+2. Remove Calendar Close button
+3. Reorder PostDetail sections
+4. Always show Feed search bar
+5. Remove unused npm packages
+6. Gate auth `console.log` behind `__DEV__`
