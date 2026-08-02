@@ -77,8 +77,7 @@ async function compressAsset(asset: ImagePicker.ImagePickerAsset): Promise<Image
  * Uploads a local image URI to Supabase Storage and returns the public URL.
  */
 export async function uploadBlogImage(localUri: string): Promise<string> {
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-  const path = `blog-images/${filename}`;
+  const objectPath = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
 
   // Read as base64 via expo-file-system — avoids the "Network request failed"
   // error that occurs when fetching file:// URIs directly on Android.
@@ -95,31 +94,29 @@ export async function uploadBlogImage(localUri: string): Promise<string> {
 
   const { error } = await supabase.storage
     .from('blog-images')
-    .upload(path, bytes, {
+    .upload(objectPath, bytes, {
       contentType: 'image/jpeg',
       upsert: false,
     });
 
   if (error) throw new Error(`Image upload failed: ${error.message}`);
 
-  const { data } = supabase.storage.from('blog-images').getPublicUrl(path);
+  const { data } = supabase.storage.from('blog-images').getPublicUrl(objectPath);
   return data.publicUrl;
 }
 
 /**
  * Extracts the storage object path from a Supabase public URL and deletes it.
+ * Supports current keys (`filename.jpg`) and legacy double-prefix keys (`blog-images/filename.jpg`).
  */
 export async function deleteBlogImage(publicUrl: string): Promise<void> {
   try {
-    // Extract path after /storage/v1/object/public/
-    const match = publicUrl.match(/\/storage\/v1\/object\/public\/(.+)/);
+    const match = publicUrl.match(/\/storage\/v1\/object\/public\/blog-images\/(.+)/);
     if (!match) return;
-    const [, fullPath] = match;
-    // fullPath = "blog-images/filename.jpg" → remove bucket prefix
-    const objectPath = fullPath.replace(/^blog-images\//, '');
+    const objectPath = match[1];
     await supabase.storage.from('blog-images').remove([objectPath]);
   } catch {
     // Non-fatal — image cleanup failure shouldn't block the operation
-    console.warn('Failed to delete image from storage');
+    if (__DEV__) console.warn('Failed to delete image from storage');
   }
 }
