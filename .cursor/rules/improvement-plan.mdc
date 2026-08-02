@@ -1,11 +1,19 @@
 ---
-description: Mobile Blog improvement roadmap — UI, logic, and infra fixes identified from codebase audit
+description: Daily improvement roadmap — UI, logic, and infra fixes identified from codebase audit
 alwaysApply: false
 ---
 
-# The Async Journal — Improvement Plan
+# Daily — Improvement Plan
 
-Audit date: 2026-08-01. Prioritized backlog for UI polish, logic correctness, and tech debt.
+Audit date: 2026-08-01. Last updated: 2026-08-02.
+
+Prioritized backlog for UI polish, logic correctness, and tech debt.
+
+## Product decisions (locked)
+
+- **App name:** Daily (display name). Technical IDs unchanged (`com.mike008.mobileblog`, `mobile-blog://` scheme, npm `mobile-blog`).
+- **Auth model:** Login required to use the app (no guest/browse-without-sign-in mode).
+- **Permissions:** Signed-in users see all published posts; edit/delete only own posts (admin UI exists but no RLS bypass yet).
 
 ---
 
@@ -19,6 +27,7 @@ Audit date: 2026-08-01. Prioritized backlog for UI polish, logic correctness, an
 ### 2. Like/dislike updates blocked by RLS for non-authors — DONE
 - Added `increment_blog_reaction` SECURITY DEFINER RPC (README SQL); app calls `supabase.rpc` with validated deltas.
 - Requires authenticated user; reactions allowed on published posts (or own drafts).
+- **Existing projects:** run the RPC SQL block in Supabase SQL editor if not already applied.
 
 ### 3. README schema out of sync with GraphQL types
 - README `mobile_blogs` DDL is missing columns the app queries: `shortCode`, `isGood`, `publishedAt`, `viewCount`.
@@ -39,7 +48,7 @@ Audit date: 2026-08-01. Prioritized backlog for UI polish, logic correctness, an
 ### 5. Client-only vote state is gameable
 - Votes stored in AsyncStorage (`vote:<postId>`), not tied to user account or server.
 - Clearing app data allows unlimited re-votes; counts drift across devices.
-- **Fix:** Pair with P0 #2 — persist votes server-side per `user_id + post_id`.
+- **Fix:** Persist votes server-side per `user_id + post_id` (extend reactions RPC or add `blog_reactions` table).
 
 ### 6. View count uses mixed APIs
 - `useViewCount` reads via Supabase REST; `useIncrementViewCount` uses RPC; `GET_VIEW_COUNT` GraphQL query exists but is unused.
@@ -127,7 +136,7 @@ Remove or wire up:
 ### 23. Dead code
 - `CalendarScreen.renderDayContent` — defined, never used
 - `ProfileScreen` unused imports: `FlatList`, `PostCard`, `themes`, `ThemeName`, `Blog` (verify before removing)
-- `TOGGLE_LIKE` gql export — superseded by inline mutation in `useLikeBlog`
+- `TOGGLE_LIKE` gql export — unused; reactions now use `increment_blog_reaction` RPC
 
 ### 24. Shared screen duplication
 - `PostDetailScreen` and `CreateEditPostScreen` duplicated across Feed/Profile stacks (intentional for independent nav), but type imports only reference `FeedStackParamList`.
@@ -137,31 +146,36 @@ Remove or wire up:
 - No React error boundary; network failures mostly `Alert.alert`.
 - **Fix:** Add error boundary + Toast for non-blocking feedback; retry buttons on failed queries.
 
-### 26. `console.log` in production auth flow
-- `AuthContext` logs redirect URL slice — remove or gate behind `__DEV__`.
+### 26. `console.log` in production auth flow — DONE
+- Gated behind `__DEV__` as part of P0 #1 auth hardening.
 
 ### 27. README inaccuracies
-- Scheme documentation wrong (see P0 #1).
+- ~~Scheme documentation wrong~~ — fixed in P0 #1.
 - Storage bucket policies section is vague — add example SQL policies.
+
+### 28. App display name rename — DONE
+- Renamed from "The Async Journal" to **Daily** in `app.json`, screens, Android `strings.xml`, README title, print footer.
+- Native rebuild required for launcher label update.
 
 ---
 
 ## Suggested implementation order
 
 ```
-Week 1: P0 #1–4 (auth, RLS/reactions, schema docs, image paths)
-Week 2: P1 #5–8 (server votes, API consistency, pagination)
-Week 3: P2 #12–17 (layout, markdown, icons, offline banner)
-Backlog: P2 #18–21, P3
+Done:    P0 #1–2, P3 #26, P3 #28 (auth, reactions RPC, rename)
+Next:    P0 #3–4 (schema docs, image paths)
+Week 2:  P1 #5–8 (server votes, API consistency, pagination)
+Week 3:  P2 #12–17 (layout, markdown, icons, offline banner)
+Backlog: P2 #18–21, P3 #22–25, P3 #27
 ```
 
 ---
 
 ## Quick wins (< 1 hour each)
 
-1. Align `app.json` scheme with `mobile-blog`
+1. ~~Align `app.json` scheme with `mobile-blog`~~ — DONE (P0 #1)
 2. Remove Calendar Close button
 3. Reorder PostDetail sections
 4. Always show Feed search bar
 5. Remove unused npm packages
-6. Gate auth `console.log` behind `__DEV__`
+6. ~~Gate auth `console.log` behind `__DEV__`~~ — DONE (P0 #1)
