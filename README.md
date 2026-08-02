@@ -34,8 +34,10 @@ Create the `mobile_blogs` table with pg_graphql rename annotations for clean cam
 ```sql
 create table mobile_blogs (
   id uuid primary key default gen_random_uuid(),
+  short_code text,
   title text not null,
   content text not null default '',
+  is_good boolean not null default false,
   likes_count integer not null default 0,
   dislikes_count integer not null default 0,
   view_count integer not null default 0,
@@ -43,6 +45,7 @@ create table mobile_blogs (
   author_id text,
   author_name text,
   status text not null default 'published',
+  published_at timestamptz,
   tags text[] not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -50,6 +53,15 @@ create table mobile_blogs (
 
 comment on table mobile_blogs is '@graphql({"name": "MobileBlog"})';
 ```
+
+> **Existing projects:** if the table already exists, add any missing columns:
+>
+> ```sql
+> alter table mobile_blogs add column if not exists short_code text;
+> alter table mobile_blogs add column if not exists is_good boolean not null default false;
+> alter table mobile_blogs add column if not exists published_at timestamptz;
+> alter table mobile_blogs add column if not exists view_count integer not null default 0;
+> ```
 
 Also create the view count RPC function:
 
