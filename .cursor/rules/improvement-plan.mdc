@@ -16,15 +16,9 @@ Audit date: 2026-08-01. Prioritized backlog for UI polish, logic correctness, an
 - Auth hardened: PKCE `exchangeCodeForSession`, implicit-token fallback, `Linking.getInitialURL` cold start, `__DEV__` logging.
 - README updated with Supabase Redirect URLs step.
 
-### 2. Like/dislike updates blocked by RLS for non-authors
-- `useLikeBlog` calls `updateMobileBlogCollection` to change `likesCount` / `dislikesCount`.
-- RLS only allows UPDATE when `auth.uid()::text = author_id` (post owner).
-- Non-owner votes will fail silently or show optimistic UI then roll back.
-- **Fix (choose one):**
-  - Add a `security definer` RPC `increment_blog_reaction(post_id, delta_likes, delta_dislikes)` callable by authenticated users, OR
-  - Add a separate `blog_reactions` table keyed by `(user_id, post_id)` with server-side count aggregation, OR
-  - Relax RLS with a narrow policy allowing only reaction columns to be updated by any authenticated user.
-- **Files:** Supabase SQL migration, `src/hooks/useBlogs.ts`, `src/lib/graphql.ts`
+### 2. Like/dislike updates blocked by RLS for non-authors — DONE
+- Added `increment_blog_reaction` SECURITY DEFINER RPC (README SQL); app calls `supabase.rpc` with validated deltas.
+- Requires authenticated user; reactions allowed on published posts (or own drafts).
 
 ### 3. README schema out of sync with GraphQL types
 - README `mobile_blogs` DDL is missing columns the app queries: `shortCode`, `isGood`, `publishedAt`, `viewCount`.
