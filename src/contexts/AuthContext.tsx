@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { Linking } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
+import { AUTH_REDIRECT_URI, isAuthRedirectUrl } from '../constants/auth';
 import { supabase } from '../lib/supabase';
 
 // Required for expo-web-browser auth session completion (iOS + Android)
@@ -12,12 +13,8 @@ const ADMIN_EMAILS = (process.env.EXPO_PUBLIC_ADMIN_EMAILS ?? '')
   .map((e: string) => e.trim())
   .filter(Boolean);
 
-const REDIRECT_URI = 'mobile-blog://auth/callback';
-
-/** Parse a Supabase OAuth implicit-flow redirect URL.
- * Extracts access_token and refresh_token from the hash fragment.
- */
-function parseRedirect(url: string): { accessToken: string; refreshToken: string } | null {
+/** Parse implicit-flow tokens from the URL hash fragment. */
+function parseImplicitTokens(url: string): { accessToken: string; refreshToken: string } | null {
   const atm = url.match(/[#&]access_token=([^&#]+)/);
   const rtm = url.match(/[#&]refresh_token=([^&#]+)/);
   if (atm && rtm) {
@@ -27,6 +24,12 @@ function parseRedirect(url: string): { accessToken: string; refreshToken: string
     };
   }
   return null;
+}
+
+/** Extract PKCE authorization code from query string (Supabase default). */
+function parseAuthCode(url: string): string | null {
+  const match = url.match(/[?&]code=([^&#]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
 interface AuthContextValue {
@@ -44,33 +47,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Prevents double-calling exchangeCodeForSession within a single sign-in attempt.
+  // Prevents double-calling session exchange within a single sign-in attempt.
   // Both the Linking listener and the WebBrowser result can fire; only the first wins.
   const exchangedRef = useRef(false);
 
-  const exchangeCode = async (url: string) => {
+  const handleAuthRedirect = async (url: string) => {
     if (exchangedRef.current) return;
     exchangedRef.current = true;
 
     WebBrowser.dismissBrowser();
 
-    const parsed = parseRedirect(url);
-    console.log('[Auth] redirect url:', url.slice(0, 60));
-
-    if (!parsed) {
-      console.warn('[Auth] Could not parse redirect URL — ignoring');
-      exchangedRef.current = false;
-      return;
+    if (__DEV__) {
+      console.log('[Auth] redirect url:', url.slice(0, 80));
     }
 
-    // Implicit flow: tokens are in the URL directly
-    const { error } = await supabase.auth.setSession({
-      access_token: parsed.accessToken,
-      refresh_token: parsed.refreshToken,
-    });
-    if (error) {
-      console.error('[Auth] setSession error:', error.message);
+    try {
+      const code = parseAuthCode(url);
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) throw error;
+        return;
+      }
+
+      const tokens = parseImplicitTokens(url);
+      if (!tokens) {
+        if (__DEV__) console.warn('[Auth] Could not parse redirect URL — ignoring');
+        exchangedRef.current = false;
+        return;
+      }
+
+      const { error } = await supabase.auth.setSession({
+        access_token: tokens.accessToken,
+        refresh_token: tokens.refreshToken,
+      });
+      if (error) throw error;
+    } catch (err) {
+      if (__DEV__) console.error('[Auth] session error:', err);
       exchangedRef.current = false;
+      throw err;
     }
   };
 
@@ -84,9 +98,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(newSession);
     });
 
-    // Android: fires when the deep link brings the app to foreground during auth
+    // Cold start: app opened via deep link before listeners were registered
+    Linking.getInitialURL().then((url) => {
+      if (url && isAuthRedirectUrl(url)) handleAuthRedirect(url);
+    });
+
+    // Warm start: deep link while app is in background (common on Android)
     const sub = Linking.addEventListener('url', ({ url }) => {
-      if (url.startsWith('mobile-blog://')) exchangeCode(url);
+      if (isAuthRedirectUrl(url)) handleAuthRedirect(url);
     });
 
     return () => {
@@ -96,15 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signInWithGoogle = async () => {
-    exchangedRef.current = false; // Reset for a fresh sign-in attempt
+    exchangedRef.current = false;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: REDIRECT_URI,
+        redirectTo: AUTH_REDIRECT_URI,
         skipBrowserRedirect: true,
         queryParams: {
-          prompt: 'select_account', // always show account picker after sign-out
+          prompt: 'select_account',
         },
       },
     });
@@ -113,18 +132,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error ?? new Error('Could not generate sign-in URL');
     }
 
-    // Chrome Custom Tab keeps the JS context alive, so the PKCE code verifier
-    // that signInWithOAuth stored in memory survives until exchangeCodeForSession
-    // is called — unlike Linking.openURL which puts the app in background where
-    // the process can be killed and the verifier lost.
-    const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_URI);
+    const result = await WebBrowser.openAuthSessionAsync(data.url, AUTH_REDIRECT_URI);
 
-    // iOS (and some Android builds): Custom Tab intercepted the redirect directly
     if (result.type === 'success') {
-      await exchangeCode(result.url);
+      await handleAuthRedirect(result.url);
+    } else if (result.type === 'cancel' || result.type === 'dismiss') {
+      exchangedRef.current = false;
     }
-    // Android fallback: the Linking 'url' listener fired during openAuthSessionAsync
-    // and already called exchangeCode. No extra work needed here.
+    // Android fallback: Linking listener may have already called handleAuthRedirect
   };
 
   const signOut = async () => {

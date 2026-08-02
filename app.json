@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "scheme": "mobileblog",
+    "scheme": "mobile-blog",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
