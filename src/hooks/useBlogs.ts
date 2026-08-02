@@ -164,6 +164,25 @@ async function setVoteStorage(postId: string, vote: VoteState) {
   }
 }
 
+function computeVoteTransition(
+  prevVote: VoteState,
+  action: 'like' | 'dislike'
+): { newVote: VoteState; deltaLikes: number; deltaDislikes: number } {
+  const newVote: VoteState = prevVote === action ? null : action;
+  let deltaLikes = 0;
+  let deltaDislikes = 0;
+  if (prevVote === 'like') deltaLikes -= 1;
+  if (prevVote === 'dislike') deltaDislikes -= 1;
+  if (newVote === 'like') deltaLikes += 1;
+  if (newVote === 'dislike') deltaDislikes += 1;
+  return { newVote, deltaLikes, deltaDislikes };
+}
+
+interface ReactionRpcRow {
+  likes_count: number;
+  dislikes_count: number;
+}
+
 export function useVote(postId: string) {
   return useQuery<VoteState>({
     queryKey: ['vote', postId],
@@ -172,7 +191,7 @@ export function useVote(postId: string) {
   });
 }
 
-export function useLikeBlog(accessToken?: string | null) {
+export function useLikeBlog(_accessToken?: string | null) {
   const qc = useQueryClient();
 
   return useMutation<
@@ -182,35 +201,19 @@ export function useLikeBlog(accessToken?: string | null) {
   >({
     mutationFn: async ({ blog, action }) => {
       const prevVote = await getVote(blog.id);
+      const { newVote, deltaLikes, deltaDislikes } = computeVoteTransition(prevVote, action);
 
-      // Toggle off if same action clicked again
-      const newVote: VoteState = prevVote === action ? null : action;
+      const { data, error } = await supabase.rpc('increment_blog_reaction', {
+        post_id: blog.id,
+        delta_likes: deltaLikes,
+        delta_dislikes: deltaDislikes,
+      });
 
-      // Compute new counts based on transition
-      let likes = blog.likesCount;
-      let dislikes = blog.dislikesCount;
+      if (error) throw error;
 
-      if (prevVote === 'like') likes -= 1;
-      if (prevVote === 'dislike') dislikes -= 1;
-      if (newVote === 'like') likes += 1;
-      if (newVote === 'dislike') dislikes += 1;
-
-      // Clamp to >= 0 to guard against data drift
-      likes = Math.max(0, likes);
-      dislikes = Math.max(0, dislikes);
-
-      const client = createGraphQLClient(accessToken);
-      await client.request(
-        `mutation UpdateReactions($id: UUID!, $likes: Int!, $dislikes: Int!) {
-           updateMobileBlogCollection(
-             filter: { id: { eq: $id } }
-             set: { likesCount: $likes, dislikesCount: $dislikes }
-           ) {
-             records { id likesCount dislikesCount }
-           }
-         }`,
-        { id: blog.id, likes, dislikes }
-      );
+      const row = (Array.isArray(data) ? data[0] : data) as ReactionRpcRow | null;
+      const likes = row?.likes_count ?? blog.likesCount;
+      const dislikes = row?.dislikes_count ?? blog.dislikesCount;
 
       await setVoteStorage(blog.id, newVote);
 
@@ -225,16 +228,12 @@ export function useLikeBlog(accessToken?: string | null) {
       await qc.cancelQueries({ queryKey: ['vote', blog.id] });
 
       const prevVote = qc.getQueryData<VoteState>(['vote', blog.id]) ?? null;
-      const newVote: VoteState = prevVote === action ? null : action;
+      const { newVote, deltaLikes, deltaDislikes } = computeVoteTransition(prevVote, action);
 
-      let likes = blog.likesCount;
-      let dislikes = blog.dislikesCount;
-      if (prevVote === 'like') likes -= 1;
-      if (prevVote === 'dislike') dislikes -= 1;
-      if (newVote === 'like') likes += 1;
-      if (newVote === 'dislike') dislikes += 1;
+      const likes = Math.max(0, blog.likesCount + deltaLikes);
+      const dislikes = Math.max(0, blog.dislikesCount + deltaDislikes);
 
-      qc.setQueryData(['blog', blog.id], { ...blog, likesCount: Math.max(0, likes), dislikesCount: Math.max(0, dislikes) });
+      qc.setQueryData(['blog', blog.id], { ...blog, likesCount: likes, dislikesCount: dislikes });
       qc.setQueryData(['vote', blog.id], newVote);
 
       return { prevBlog: blog, prevVote };

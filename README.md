@@ -60,6 +60,54 @@ returns void as $$
 $$ language sql security definer;
 ```
 
+And the reactions RPC (allows any signed-in user to like/dislike published posts, bypassing author-only RLS):
+
+```sql
+create or replace function increment_blog_reaction(
+  post_id uuid,
+  delta_likes int,
+  delta_dislikes int
+)
+returns table (likes_count int, dislikes_count int)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  new_likes int;
+  new_dislikes int;
+begin
+  if auth.uid() is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if delta_likes not between -1 and 1 or delta_dislikes not between -1 and 1 then
+    raise exception 'Invalid reaction delta';
+  end if;
+
+  update mobile_blogs
+  set
+    likes_count = greatest(0, mobile_blogs.likes_count + delta_likes),
+    dislikes_count = greatest(0, mobile_blogs.dislikes_count + delta_dislikes),
+    updated_at = now()
+  where mobile_blogs.id = post_id
+    and (status = 'published' or author_id = auth.uid()::text)
+  returning mobile_blogs.likes_count, mobile_blogs.dislikes_count
+  into new_likes, new_dislikes;
+
+  if not found then
+    raise exception 'Post not found or not reactable';
+  end if;
+
+  return query select new_likes, new_dislikes;
+end;
+$$;
+
+grant execute on function increment_blog_reaction(uuid, int, int) to authenticated;
+```
+
+> **Existing projects:** run the `increment_blog_reaction` block above in the Supabase SQL editor.
+
 #### 3.2 RLS Policies
 
 ```sql
