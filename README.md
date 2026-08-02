@@ -1,4 +1,4 @@
-# The Async Journal
+# Daily
 
 A React Native / Expo mobile journal for writing, reading, and browsing posts. Sign in with Google via Supabase Auth, then publish Markdown entries with images and tags, browse a searchable feed, explore posts on a calendar, and manage drafts from your profile.
 

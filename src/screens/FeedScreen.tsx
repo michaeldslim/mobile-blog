@@ -98,7 +98,7 @@ export function FeedScreen() {
     <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>The Async Journal</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Daily</Text>
         {user && (
           <TouchableOpacity
             style={[styles.newPostBtn, { backgroundColor: colors.primary }]}

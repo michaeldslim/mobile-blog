@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "The Async Journal",
+    "name": "Daily",
     "slug": "mobileblog",
     "version": "2.1.0",
     "orientation": "portrait",
@@ -35,8 +35,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Mobile Blog to access your photos for uploading post images.",
-          "cameraPermission": "Allow Mobile Blog to use your camera to take post images."
+          "photosPermission": "Allow Daily to access your photos for uploading post images.",
+          "cameraPermission": "Allow Daily to use your camera to take post images."
         }
       ]
     ],

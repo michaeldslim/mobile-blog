@@ -41,7 +41,7 @@ export function LoginScreen() {
         {/* Logo / Header */}
         <View style={styles.header}>
           <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
-          <Text style={[styles.appName, { color: colors.foreground }]}>The Async Journal</Text>
+          <Text style={[styles.appName, { color: colors.foreground }]}>Daily</Text>
         </View>
 
         {/* Card */}

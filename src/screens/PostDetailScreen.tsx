@@ -122,7 +122,7 @@ export function PostDetailScreen({ route, navigation }: Props) {
             ${imageHtml}
             <div class="content">${contentHtml}</div>
             ${tagsHtml}
-            <p class="footer">The Async Journal</p>
+            <p class="footer">Daily</p>
           </body>
         </html>`;
 
