@@ -1,0 +1,318 @@
+---
+description: Jotai global-state migration plan — Context → atoms, with per-file learning docs in docs/
+alwaysApply: false
+---
+
+# Jotai Global State Migration Plan
+
+Status: **planned** (not started). Do not migrate React Query server state.
+
+Last updated: 2026-09-13.
+
+---
+
+## Goal
+
+Replace **global client state only** (today: `ThemeContext`, `AuthContext`) with **Jotai atoms**, while keeping:
+
+- **TanStack React Query** for all server/async state (`useBlogs`, mutations, votes, view counts)
+- **Local `useState`** for screen-scoped UI (forms, modals, search debounce timers)
+
+Primary success metric: **learning** — every new or modified source file must get a matching explainer in `docs/` **before or alongside** that file’s code change (see [Documentation workflow](#documentation-workflow-learning-first)).
+
+---
+
+## Scope
+
+### In scope
+
+| Current | Target |
+|---------|--------|
+| `src/contexts/ThemeContext.tsx` | `src/atoms/theme.ts` + thin `useTheme()` hook |
+| `src/contexts/AuthContext.tsx` | `src/atoms/auth.ts` + `src/lib/authActions.ts` + `AuthInitializer` |
+| `App.tsx` provider tree | Jotai `<Provider>`, remove Context providers |
+| `package.json` | Add `jotai`; remove unused `zustand` |
+
+### Out of scope (do not touch in this migration)
+
+- `src/hooks/useBlogs.ts` and all React Query hooks
+- Screen-local state (`FeedScreen` filters, `CreateEditPostScreen` form, etc.) unless explicitly added in a later optional phase
+- Navigation state (React Navigation owns this)
+
+---
+
+## Architecture (target)
+
+```
+App.tsx
+  QueryClientProvider          ← unchanged (server state)
+    Jotai Provider             ← new
+      AuthInitializer          ← side effects (Supabase, Linking, OAuth)
+        RootNavigator
+
+src/atoms/theme.ts            ← themeNameAtom, themeAtom (derived)
+src/atoms/auth.ts             ← sessionAtom, authLoadingAtom, userAtom, isAdminAtom (derived)
+src/lib/authActions.ts        ← signInWithGoogle, signOut, handleAuthRedirect (imperative)
+src/hooks/useTheme.ts         ← optional: move hook out of context file
+src/hooks/useAuth.ts          ← optional: move hook out of context file
+```
+
+**Rule:** Atoms hold **data**; **side effects** live in `AuthInitializer` or action modules, not inside atom read functions.
+
+---
+
+## Documentation workflow (learning-first)
+
+This is the **most important** part of the migration. For **every** file created or meaningfully edited:
+
+1. Create or update `docs/<doc-name>.md` **in the same PR/commit slice** as the code change.
+2. The doc must be **self-contained** — readable without opening the source file.
+3. Write in **Korean** (code samples stay in English/TypeScript).
+4. Do **not** batch all docs at the end; one doc per slice.
+
+### Doc naming convention
+
+Map source path → doc path under `docs/`:
+
+| Source file | Doc file |
+|-------------|----------|
+| `src/atoms/theme.ts` | `docs/atoms-theme.md` |
+| `src/atoms/auth.ts` | `docs/atoms-auth.md` |
+| `src/lib/authActions.ts` | `docs/lib-authActions.md` |
+| `src/components/AuthInitializer.tsx` | `docs/components-AuthInitializer.md` |
+| `src/hooks/useTheme.ts` | `docs/hooks-useTheme.md` |
+| `src/hooks/useAuth.ts` | `docs/hooks-useAuth.md` |
+| `App.tsx` | `docs/App.md` |
+| `package.json` (deps slice) | `docs/package-jotai-deps.md` |
+
+Pattern: `docs/<folder>-<filename>.md` (drop `src/` prefix, use kebab-case).
+
+### Required sections in every doc
+
+Each `docs/*.md` must include:
+
+1. **이 파일의 역할** — one paragraph, what problem it solves
+2. **Jotai 개념** — which primitives are used (`atom`, `atomWithStorage`, derived atom, `useAtom`, `useSetAtom`, `useAtomValue`, `Provider`)
+3. **Before → After** — what Context/store pattern existed and what changed
+4. **코드 walkthrough** — block-by-block explanation of the final file
+5. **다른 파일과의 관계** — imports, who reads/writes these atoms
+6. **흔한 실수** — 2–3 pitfalls specific to this file (e.g. stale closure, missing Provider, AsyncStorage race)
+7. **직접 해보기** — one small exercise (e.g. “add a `isDarkAtom` derived atom”)
+
+### Agent / developer checklist per slice
+
+- [ ] Doc file exists and matches the code in the same slice
+- [ ] Doc explains **why**, not only **what**
+- [ ] No server-state logic moved into Jotai
+- [ ] `npm run typecheck` or equivalent passes (when script exists)
+- [ ] Manual smoke: theme switch, login, logout, deep-link auth (Auth slices)
+
+---
+
+## Phased implementation
+
+Execute in order. **One phase = one or more small commits.** Ask user before each commit (see `git-commit-workflow.mdc`).
+
+### Phase 0 — Setup (no behavior change)
+
+**Files:** `package.json`, `docs/package-jotai-deps.md`
+
+- Install `jotai` (latest v2 compatible with React 19)
+- Remove `zustand` (unused in codebase)
+- Add `<Provider>` to `App.tsx` **only** — keep existing Context providers temporarily (Jotai + Context can coexist)
+
+**Doc focus:** what Jotai is, why Provider is needed, difference from Context, why Zustand is removed.
+
+**Verify:** app builds and runs identically.
+
+---
+
+### Phase 1 — Theme atoms
+
+**Files:**
+
+| Action | Path | Doc |
+|--------|------|-----|
+| Create | `src/atoms/theme.ts` | `docs/atoms-theme.md` |
+| Refactor | `src/contexts/ThemeContext.tsx` → thin wrapper re-exporting atoms, OR replace with `src/hooks/useTheme.ts` | `docs/hooks-useTheme.md` or update `docs/atoms-theme.md` |
+| Edit | `App.tsx` — remove `ThemeProvider` once hook uses atoms | `docs/App.md` (partial: theme section only) |
+
+**Implementation notes:**
+
+- Use `atomWithStorage` + `createJSONStorage` with `@react-native-async-storage/async-storage`
+- `themeAtom = atom((get) => themes[get(themeNameAtom)])` — derived atom pattern
+- Keep public API: `useTheme()` returns `{ theme, themeName, setTheme, allThemes }` so **screens need zero import changes**
+
+**Doc focus:** derived atoms, storage hydration, fine-grained subscriptions vs Context re-renders.
+
+**Verify:** theme persists across restart; all themed screens render correctly.
+
+---
+
+### Phase 2 — Auth atoms (read path)
+
+**Files:**
+
+| Action | Path | Doc |
+|--------|------|-----|
+| Create | `src/atoms/auth.ts` | `docs/atoms-auth.md` |
+| Create | `src/hooks/useAuth.ts` (if splitting from context) | `docs/hooks-useAuth.md` |
+
+**Implementation notes:**
+
+- `sessionAtom`, `authLoadingAtom`
+- Derived: `userAtom`, `isAdminAtom` (same logic as current `AuthContext`)
+- `useAuth()` returns same shape: `{ session, user, isAdmin, loading, signInWithGoogle, signOut }`
+- Actions can temporarily delegate to old context or stub until Phase 3
+
+**Doc focus:** primitive vs derived atoms, when **not** to put async logic in atoms.
+
+**Verify:** read-only consumers still compile; optional: wire atoms to existing context for parallel run.
+
+---
+
+### Phase 3 — Auth side effects & actions
+
+**Files:**
+
+| Action | Path | Doc |
+|--------|------|-----|
+| Create | `src/lib/authActions.ts` | `docs/lib-authActions.md` |
+| Create | `src/components/AuthInitializer.tsx` | `docs/components-AuthInitializer.md` |
+| Refactor | `src/contexts/AuthContext.tsx` — delete or reduce to re-exports | update `docs/hooks-useAuth.md` |
+| Edit | `App.tsx` — mount `AuthInitializer`, remove `AuthProvider` | `docs/App.md` (auth section) |
+
+**Port unchanged logic from current `AuthContext`:**
+
+- `supabase.auth.getSession()` + `onAuthStateChange`
+- `Linking.getInitialURL` / `Linking.addEventListener` for OAuth redirect
+- `exchangedRef` guard against double session exchange
+- PKCE `exchangeCodeForSession` + implicit token fallback
+- `WebBrowser.openAuthSessionAsync` flow
+
+**Pattern:**
+
+```typescript
+// AuthInitializer.tsx — pseudocode
+function AuthInitializer({ children }) {
+  const setSession = useSetAtom(sessionAtom);
+  const setLoading = useSetAtom(authLoadingAtom);
+  useEffect(() => { /* existing AuthContext useEffect body */ }, []);
+  return children;
+}
+```
+
+**Doc focus:** separation of concerns (state vs effects), ref guards, OAuth flow diagram, testing checklist.
+
+**Verify:** cold start, warm deep link, Google sign-in, sign-out, admin flag for configured emails.
+
+---
+
+### Phase 4 — Cleanup
+
+**Files:**
+
+| Action | Path | Doc |
+|--------|------|-----|
+| Delete or empty | `src/contexts/ThemeContext.tsx`, `src/contexts/AuthContext.tsx` | add **Migration complete** section to each doc |
+| Edit | `App.tsx` — final provider tree | finalize `docs/App.md` |
+| Optional | `docs/jotai-migration-overview.md` | index linking all docs |
+
+**Verify:** no imports from deleted contexts; grep `createContext` only if intentional elsewhere.
+
+---
+
+### Phase 5 — Optional (later, not required for “done”)
+
+- Feed filter atoms (`searchAtom`, `activeTagAtom`, `activeSortAtom`) if cross-tab persistence is desired
+- `docs/optional-feed-filters.md` if implemented
+
+---
+
+## Files touched (summary)
+
+### New files
+
+- `src/atoms/theme.ts`
+- `src/atoms/auth.ts`
+- `src/lib/authActions.ts`
+- `src/components/AuthInitializer.tsx`
+- `src/hooks/useTheme.ts` (optional split)
+- `src/hooks/useAuth.ts` (optional split)
+- `docs/*.md` — one per slice (see table above)
+
+### Modified files
+
+- `App.tsx`
+- `package.json` / lockfile
+- `src/contexts/ThemeContext.tsx` → removed after Phase 1
+- `src/contexts/AuthContext.tsx` → removed after Phase 3
+
+### Unchanged imports (goal)
+
+These should keep `import { useTheme } from '...'` and `import { useAuth } from '...'` with **no edits** if hook paths are preserved:
+
+- `src/navigation/index.tsx`
+- `src/screens/*` (Feed, Login, Profile, Calendar, PostDetail, CreateEditPost)
+- `src/components/*` (PostCard, MarkdownContent, EmptyState, LoadingSpinner, TagPill)
+
+---
+
+## Commit slices (suggested)
+
+| # | Type | Scope | Approx files |
+|---|------|-------|--------------|
+| 1 | `chore:` | jotai add, zustand remove, Provider only | 2 + doc |
+| 2 | `feat:` | theme atoms + ThemeContext removal | 2–3 + doc |
+| 3 | `feat:` | auth atoms + useAuth hook | 2 + doc |
+| 4 | `feat:` | authActions + AuthInitializer + AuthContext removal | 3 + doc |
+| 5 | `refactor:` | delete context files, finalize App | 2 + doc |
+
+Never combine unrelated phases in one commit. Never commit without the matching `docs/*.md` for that slice.
+
+---
+
+## Jotai concepts to cover across docs (learning map)
+
+Ensure the doc set collectively teaches:
+
+| Concept | Introduced in |
+|---------|----------------|
+| `atom` | `docs/atoms-auth.md` |
+| derived atom `(get) => ...` | `docs/atoms-theme.md`, `docs/atoms-auth.md` |
+| `atomWithStorage` + AsyncStorage | `docs/atoms-theme.md` |
+| `Provider` | `docs/package-jotai-deps.md`, `docs/App.md` |
+| `useAtomValue` / `useSetAtom` vs `useAtom` | `docs/components-AuthInitializer.md` |
+| write-only / action module pattern | `docs/lib-authActions.md` |
+| Jotai + React Query boundaries | `docs/App.md` or overview |
+
+---
+
+## Risks and mitigations
+
+| Risk | Mitigation |
+|------|------------|
+| OAuth regression | Phase 3 doc includes step-by-step manual test; port logic verbatim first |
+| Theme flash on launch | Document AsyncStorage hydration; default theme until load completes (same as today) |
+| Over-migrating server state | Rule: no imports of `useBlogs` logic into atoms |
+| Learning docs skipped | **Block merge/commit** until doc exists for the slice (this rule) |
+
+---
+
+## Definition of done
+
+- [ ] No `ThemeProvider` / `AuthProvider` in `App.tsx`
+- [ ] `useTheme()` / `useAuth()` APIs unchanged for consumers
+- [ ] React Query hooks untouched
+- [ ] All docs listed in [Doc naming convention](#doc-naming-convention) exist and are complete
+- [ ] Auth + theme manual tests pass
+- [ ] `zustand` removed from dependencies
+
+---
+
+## When working on this migration
+
+1. Read this rule first.
+2. Implement **one phase** (or sub-slice) only.
+3. Write the **doc before asking to commit**.
+4. Do not start Phase N+1 until Phase N is verified and committed (with user approval).
