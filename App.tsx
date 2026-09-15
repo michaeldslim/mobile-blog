@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { useTheme } from './src/hooks/useTheme';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { RootNavigator } from './src/navigation';
 
@@ -29,12 +29,10 @@ export default function App() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <Provider>
-            <ThemeProvider>
-              <AuthProvider>
-                <ThemedStatusBar />
-                <RootNavigator />
-              </AuthProvider>
-            </ThemeProvider>
+            <AuthProvider>
+              <ThemedStatusBar />
+              <RootNavigator />
+            </AuthProvider>
           </Provider>
         </QueryClientProvider>
       </SafeAreaProvider>

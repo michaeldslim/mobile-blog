@@ -5,7 +5,7 @@ alwaysApply: false
 
 # Jotai Global State Migration Plan
 
-Status: **Phase 0 complete** — Jotai installed, Provider in App.tsx; Context unchanged. Do not migrate React Query server state.
+Status: **Phase 1 complete** — Theme on Jotai atoms; `ThemeProvider` removed. Auth still Context. Do not migrate React Query server state.
 
 Last updated: 2026-09-13.
 
