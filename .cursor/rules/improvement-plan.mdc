@@ -12,7 +12,7 @@ Prioritized backlog for UI polish, logic correctness, and tech debt.
 ## Product decisions (locked)
 
 - **App name:** Daily (display name). Technical IDs unchanged (`com.mike008.mobileblog`, `mobile-blog://` scheme, npm `mobile-blog`).
-- **Auth model:** Login required to use the app (no guest/browse-without-sign-in mode).
+- **Auth model:** Google sign-in required before first use; **`device_continue`** allows on-device writing without a live session (local drafts + Profile). Set `AUTH_POLICY` in `src/constants/auth.ts`. Sign out clears cached account on device.
 - **Permissions:** Signed-in users see all published posts; edit/delete only own posts (admin UI exists but no RLS bypass yet).
 
 ---
