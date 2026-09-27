@@ -17,8 +17,9 @@ import { spacing, fontSize, radius } from '../constants/theme';
 
 export function LoginScreen() {
   const { theme } = useTheme();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, enterDeviceContinue, lastKnownAccount } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [deviceLoading, setDeviceLoading] = useState(false);
   const { colors } = theme;
 
   const handleGoogleSignIn = async () => {
@@ -32,26 +33,38 @@ export function LoginScreen() {
     }
   };
 
+  const handleDeviceContinue = async () => {
+    try {
+      setDeviceLoading(true);
+      await enterDeviceContinue();
+    } catch (err: any) {
+      Alert.alert('Could not continue', err?.message ?? 'Please try again.');
+    } finally {
+      setDeviceLoading(false);
+    }
+  };
+
+  const deviceName =
+    lastKnownAccount?.fullName ?? lastKnownAccount?.email ?? 'this device';
+
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.inner}
       >
-        {/* Logo / Header */}
         <View style={styles.header}>
           <Image source={require('../../assets/icon.png')} style={styles.logoImage} />
           <Text style={[styles.appName, { color: colors.foreground }]}>Daily</Text>
         </View>
 
-        {/* Card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>Welcome back</Text>
           <Text style={[styles.cardSubtitle, { color: colors.mutedForeground }]}>
-            Sign in to create, edit, and manage your posts.
+            Sign in to read the feed and publish notes. You can also keep writing on this device
+            without a connection after your first sign-in.
           </Text>
 
-          {/* Google Sign-in Button */}
           <TouchableOpacity
             style={[
               styles.googleButton,
@@ -59,7 +72,7 @@ export function LoginScreen() {
               loading && styles.buttonDisabled,
             ]}
             onPress={handleGoogleSignIn}
-            disabled={loading}
+            disabled={loading || deviceLoading}
             activeOpacity={0.8}
           >
             {loading ? (
@@ -73,6 +86,27 @@ export function LoginScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {lastKnownAccount && (
+            <TouchableOpacity
+              style={[
+                styles.deviceButton,
+                { borderColor: colors.border, backgroundColor: colors.secondary },
+                deviceLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleDeviceContinue}
+              disabled={loading || deviceLoading}
+              activeOpacity={0.8}
+            >
+              {deviceLoading ? (
+                <ActivityIndicator color={colors.foreground} size="small" />
+              ) : (
+                <Text style={[styles.deviceButtonText, { color: colors.foreground }]}>
+                  Continue on this device as {deviceName}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -104,10 +138,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.5,
   },
-  tagline: {
-    fontSize: fontSize.base,
-    textAlign: 'center',
-  },
   card: {
     borderRadius: radius['2xl'],
     borderWidth: 1,
@@ -132,6 +162,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
   },
+  deviceButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  deviceButtonText: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   googleIcon: {
     fontSize: fontSize.lg,
     fontWeight: '800',
@@ -143,10 +185,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.6,
-  },
-  disclaimer: {
-    fontSize: 11,
-    textAlign: 'center',
-    lineHeight: 16,
   },
 });

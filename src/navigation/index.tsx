@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +16,8 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { OfflineBanner } from '../components/OfflineBanner';
+import { OfflineDraftSync } from '../components/OfflineDraftSync';
+import { DeviceContinueBanner } from '../components/DeviceContinueBanner';
 
 // ─── Param Lists — re-exported from types.ts to avoid circular imports ───────
 export type { RootStackParamList, FeedStackParamList, ProfileStackParamList, CalendarStackParamList, TabParamList } from './types';
@@ -35,17 +37,22 @@ function FeedNavigator() {
   const { theme } = useTheme();
   const { colors } = theme;
   return (
-    <FeedStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-        animation: 'slide_from_right',
-      }}
-    >
-      <FeedStack.Screen name="Feed" component={FeedScreen} />
-      <FeedStack.Screen name="PostDetail" component={PostDetailScreen} />
-      <FeedStack.Screen name="CreateEditPost" component={CreateEditPostScreen} />
-    </FeedStack.Navigator>
+    <View style={{ flex: 1 }}>
+      <DeviceContinueBanner />
+      <View style={{ flex: 1 }}>
+        <FeedStack.Navigator
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+            animation: 'slide_from_right',
+          }}
+        >
+          <FeedStack.Screen name="Feed" component={FeedScreen} />
+          <FeedStack.Screen name="PostDetail" component={PostDetailScreen} />
+          <FeedStack.Screen name="CreateEditPost" component={CreateEditPostScreen} />
+        </FeedStack.Navigator>
+      </View>
+    </View>
   );
 }
 
@@ -55,17 +62,22 @@ function ProfileNavigator() {
   const { theme } = useTheme();
   const { colors } = theme;
   return (
-    <ProfileStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-        animation: 'slide_from_right',
-      }}
-    >
-      <ProfileStack.Screen name="Profile" component={ProfileScreen} />
-      <ProfileStack.Screen name="PostDetail" component={PostDetailScreen} />
-      <ProfileStack.Screen name="CreateEditPost" component={CreateEditPostScreen} />
-    </ProfileStack.Navigator>
+    <View style={{ flex: 1 }}>
+      <DeviceContinueBanner />
+      <View style={{ flex: 1 }}>
+        <ProfileStack.Navigator
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+            animation: 'slide_from_right',
+          }}
+        >
+          <ProfileStack.Screen name="Profile" component={ProfileScreen} />
+          <ProfileStack.Screen name="PostDetail" component={PostDetailScreen} />
+          <ProfileStack.Screen name="CreateEditPost" component={CreateEditPostScreen} />
+        </ProfileStack.Navigator>
+      </View>
+    </View>
   );
 }
 
@@ -74,16 +86,21 @@ function CalendarNavigator() {
   const { theme } = useTheme();
   const { colors } = theme;
   return (
-    <CalendarStack.Navigator
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-        animation: 'slide_from_right',
-      }}
-    >
-      <CalendarStack.Screen name="CalendarHome" component={CalendarScreen} />
-      <CalendarStack.Screen name="PostDetail" component={PostDetailScreen} />
-    </CalendarStack.Navigator>
+    <View style={{ flex: 1 }}>
+      <DeviceContinueBanner />
+      <View style={{ flex: 1 }}>
+        <CalendarStack.Navigator
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+            animation: 'slide_from_right',
+          }}
+        >
+          <CalendarStack.Screen name="CalendarHome" component={CalendarScreen} />
+          <CalendarStack.Screen name="PostDetail" component={PostDetailScreen} />
+        </CalendarStack.Navigator>
+      </View>
+    </View>
   );
 }
 
@@ -148,7 +165,7 @@ function AppTabs() {
 
 export function RootNavigator() {
   const { theme } = useTheme();
-  const { session, loading } = useAuth();
+  const { session, loading, canUseApp } = useAuth();
   const { colors } = theme;
 
   if (loading) return <LoadingSpinner fullScreen />;
@@ -156,12 +173,13 @@ export function RootNavigator() {
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {session ? (
+        {canUseApp ? (
           <RootStack.Screen name="App" component={AppTabs} />
         ) : (
           <RootStack.Screen name="Auth" component={LoginScreen} />
         )}
       </RootStack.Navigator>
+      {session ? <OfflineDraftSync /> : null}
       <OfflineBanner />
     </NavigationContainer>
   );

@@ -9,13 +9,13 @@ export type RootStackParamList = {
 export type FeedStackParamList = {
   Feed: undefined;
   PostDetail: { postId: string };
-  CreateEditPost: { postId?: string; mode: 'create' | 'edit' };
+  CreateEditPost: { postId?: string; localDraftId?: string; mode: 'create' | 'edit' };
 };
 
 export type ProfileStackParamList = {
   Profile: undefined;
   PostDetail: { postId: string };
-  CreateEditPost: { postId?: string; mode: 'create' | 'edit' };
+  CreateEditPost: { postId?: string; localDraftId?: string; mode: 'create' | 'edit' };
 };
 
 export type CalendarStackParamList = {
