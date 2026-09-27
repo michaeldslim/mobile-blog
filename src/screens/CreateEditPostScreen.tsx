@@ -15,10 +15,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useBlog, useCreateBlog, useUpdateBlog } from '../hooks/useBlogs';
+import { useInvalidateOfflineDrafts } from '../hooks/useOfflineDrafts';
 import { pickAndCompressImage, captureAndCompressImage, uploadBlogImage } from '../lib/imageUpload';
+import { checkOnline } from '../lib/networkStatus';
+import {
+  createOfflineDraftId,
+  getOfflineDraft,
+  removeOfflineDraft,
+  upsertOfflineDraft,
+} from '../lib/offlineDrafts';
 import { BlogStatus } from '../types';
 import { spacing, fontSize, radius } from '../constants/theme';
 import { FeedStackParamList } from '../navigation/types';
@@ -26,17 +35,23 @@ import { FeedStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<FeedStackParamList, 'CreateEditPost'>;
 
 export function CreateEditPostScreen({ route, navigation }: Props) {
-  const { mode, postId } = route.params;
+  const { mode, postId, localDraftId: routeLocalDraftId } = route.params;
   const { theme } = useTheme();
-  const { session, user } = useAuth();
+  const { session, effectiveUser, isDeviceContinue } = useAuth();
   const { colors } = theme;
   const isEdit = mode === 'edit';
+  const isLocalDraft = !!routeLocalDraftId;
 
   // Fetch existing post for edit mode
-  const { data: existingBlog } = useBlog(postId ?? '', session?.access_token);
+  const { data: existingBlog } = useBlog(
+    postId ?? '',
+    session?.access_token,
+    !isDeviceContinue && isEdit
+  );
 
   const createMutation = useCreateBlog(session?.access_token);
   const updateMutation = useUpdateBlog(session?.access_token);
+  const invalidateOfflineDrafts = useInvalidateOfflineDrafts();
 
   // Form state
   const [title, setTitle] = useState('');
@@ -49,6 +64,39 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
   const [imageRemoved, setImageRemoved] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
+  const [activeLocalDraftId, setActiveLocalDraftId] = useState<string | null>(
+    routeLocalDraftId ?? null
+  );
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let cancelled = false;
+      checkOnline().then((online) => {
+        if (!cancelled) setIsOffline(!online);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  // Pre-fill local offline draft
+  useEffect(() => {
+    if (!routeLocalDraftId) return;
+    getOfflineDraft(routeLocalDraftId).then((draft) => {
+      if (!draft) return;
+      setTitle(draft.title);
+      setContent(draft.content);
+      setTags(draft.tags ?? []);
+      setStatus(draft.status);
+      if (draft.localImageUri) {
+        setImageUri(draft.localImageUri);
+        setImageUrl(null);
+      }
+      setActiveLocalDraftId(draft.localId);
+    });
+  }, [routeLocalDraftId]);
 
   // Pre-fill form in edit mode
   useEffect(() => {
@@ -126,6 +174,42 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
 
   // ─── Save ────────────────────────────────────────────────────────────────────
 
+  const saveOfflineDraft = async (pendingTags: string[]) => {
+    if (!effectiveUser?.id) {
+      Alert.alert(
+        'Account required',
+        'Sign in with Google once on this device, or use Continue on this device from the sign-in screen.'
+      );
+      return;
+    }
+
+    const localId = activeLocalDraftId ?? createOfflineDraftId();
+    const localImageUri = imageRemoved ? null : imageUri ?? null;
+
+    await upsertOfflineDraft({
+      localId,
+      title: title.trim(),
+      content: content.trim(),
+      tags: pendingTags,
+      status,
+      localImageUri,
+      authorId: effectiveUser.id,
+      authorName:
+        effectiveUser.user_metadata?.full_name ?? effectiveUser.email ?? undefined,
+    });
+    invalidateOfflineDrafts();
+
+    const imageNote =
+      localImageUri && isOffline
+        ? ' The header image will upload when you are back online.'
+        : '';
+    Alert.alert(
+      'Saved on device',
+      `Your note is stored locally and will publish when the internet is available.${imageNote}`,
+      [{ text: 'OK', onPress: () => navigation.goBack() }]
+    );
+  };
+
   const handleSave = async () => {
     if (!title.trim()) {
       Alert.alert('Validation Error', 'Post title is required.');
@@ -133,6 +217,53 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
     }
     if (!content.trim()) {
       Alert.alert('Validation Error', 'Post content is required.');
+      return;
+    }
+
+    const pendingTags = tagInput.trim()
+      ? [...tags, tagInput.trim().toLowerCase()]
+      : tags;
+
+    if (isDeviceContinue && !isLocalDraft && !isEdit) {
+      setIsSaving(true);
+      try {
+        await saveOfflineDraft(pendingTags);
+      } catch (err: any) {
+        Alert.alert('Error', err?.message ?? 'Could not save this note on your device.');
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    if (isDeviceContinue && isEdit) {
+      Alert.alert(
+        'Sign in required',
+        'Editing published posts needs Google sign-in. You can still edit offline drafts from Profile.'
+      );
+      return;
+    }
+
+    const online = await checkOnline();
+    setIsOffline(!online);
+
+    if (isEdit && postId && !online) {
+      Alert.alert(
+        'You are offline',
+        'Editing an existing post requires an internet connection. You can write a new note and save it on this device instead.'
+      );
+      return;
+    }
+
+    if (!online && !isEdit) {
+      setIsSaving(true);
+      try {
+        await saveOfflineDraft(pendingTags);
+      } catch (err: any) {
+        Alert.alert('Error', err?.message ?? 'Could not save this note on your device.');
+      } finally {
+        setIsSaving(false);
+      }
       return;
     }
 
@@ -146,14 +277,8 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
         finalImageUrl = await uploadBlogImage(imageUri);
         setIsUploadingImage(false);
       } else if (imageRemoved) {
-        // Image was explicitly removed by the user
         finalImageUrl = null;
       }
-      // else: no new image picked and not removed → keep existing imageUrl
-
-      const pendingTags = tagInput.trim()
-        ? [...tags, tagInput.trim().toLowerCase()]
-        : tags;
 
       if (isEdit && postId) {
         await updateMutation.mutateAsync({
@@ -177,15 +302,29 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
           tags: pendingTags,
           status,
           imageUrl: finalImageUrl,
-          authorId: user?.id,
-          authorName: user?.user_metadata?.full_name ?? user?.email ?? undefined,
+          authorId: effectiveUser?.id,
+          authorName:
+            effectiveUser?.user_metadata?.full_name ?? effectiveUser?.email ?? undefined,
         });
+        if (activeLocalDraftId) {
+          await removeOfflineDraft(activeLocalDraftId);
+          invalidateOfflineDrafts();
+        }
         Alert.alert('Published', 'Post created successfully!', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
       }
     } catch (err: any) {
       setIsUploadingImage(false);
+      const stillOffline = !(await checkOnline());
+      if (!isEdit && stillOffline) {
+        try {
+          await saveOfflineDraft(pendingTags);
+          return;
+        } catch {
+          // fall through to generic error
+        }
+      }
       Alert.alert('Error', err?.message ?? 'Failed to save post. Please try again.');
     } finally {
       setIsSaving(false);
@@ -195,6 +334,14 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
   const displayImage = imageUri || imageUrl;
   const isBusy = isSaving || isUploadingImage;
 
+  const saveLabel = (() => {
+    if (isEdit) return 'Update';
+    if (isDeviceContinue || isOffline) return 'Save locally';
+    return 'Publish';
+  })();
+
+  const navTitle = isEdit ? 'Edit Post' : isLocalDraft ? 'Offline draft' : 'New Post';
+
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       {/* Nav Bar */}
@@ -203,9 +350,7 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
           <Text style={[styles.cancelText, { color: colors.mutedForeground }]}>Cancel</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.navTitle, { color: colors.foreground }]}>
-          {isEdit ? 'Edit Post' : 'New Post'}
-        </Text>
+        <Text style={[styles.navTitle, { color: colors.foreground }]}>{navTitle}</Text>
 
         <TouchableOpacity
           onPress={handleSave}
@@ -216,7 +361,7 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
             <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : (
             <Text style={[styles.saveBtnText, { color: colors.primaryForeground }]}>
-              {isEdit ? 'Update' : 'Publish'}
+              {saveLabel}
             </Text>
           )}
         </TouchableOpacity>
@@ -233,6 +378,16 @@ export function CreateEditPostScreen({ route, navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {(isDeviceContinue || isOffline) && !isEdit && (
+            <View style={[styles.offlineHint, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <Text style={[styles.offlineHintText, { color: colors.foreground }]}>
+                {isDeviceContinue
+                  ? 'On-device mode — notes stay on this phone until you sign in to publish.'
+                  : 'Offline — text saves on this device. Images upload when you reconnect.'}
+              </Text>
+            </View>
+          )}
+
           {/* Title */}
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>Title *</Text>
@@ -478,5 +633,14 @@ const styles = StyleSheet.create({
   statusHint: {
     fontSize: fontSize.base,
     fontWeight: '600',
+  },
+  offlineHint: {
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+  },
+  offlineHintText: {
+    fontSize: fontSize.sm,
+    lineHeight: 20,
   },
 });

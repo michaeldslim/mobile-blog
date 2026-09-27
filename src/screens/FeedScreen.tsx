@@ -29,7 +29,7 @@ type FeedNavProp = NativeStackNavigationProp<FeedStackParamList>;
 
 export function FeedScreen() {
   const { theme } = useTheme();
-  const { session, user } = useAuth();
+  const { session, effectiveUser, isDeviceContinue } = useAuth();
   const navigation = useNavigation<FeedNavProp>();
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
@@ -68,6 +68,7 @@ export function FeedScreen() {
     tag: activeTag,
     orderBy: SORT_OPTIONS.find((s) => s.key === activeSort)!.orderBy,
     accessToken: session?.access_token,
+    enabled: !isDeviceContinue && !!session,
   });
 
   const blogs = flattenBlogPages(data);
@@ -99,7 +100,7 @@ export function FeedScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Daily</Text>
-        {user && (
+        {effectiveUser && (
           <TouchableOpacity
             style={[styles.newPostBtn, { backgroundColor: colors.primary }]}
             onPress={() => navigation.navigate('CreateEditPost', { mode: 'create' })}
@@ -174,7 +175,12 @@ export function FeedScreen() {
         </View>
       )}
 
-      {isLoading ? (
+      {isDeviceContinue ? (
+        <EmptyState
+          title="Sign in to read the feed"
+          message="On-device mode keeps your drafts on this phone. Use Profile to edit queued notes, or sign in from the banner above to sync."
+        />
+      ) : isLoading ? (
         <LoadingSpinner fullScreen />
       ) : (
         <FlatList

@@ -16,6 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useAllBlogsForCalendar, flattenBlogPages } from '../hooks/useBlogs';
 import { LoadingSpinner } from '../components/LoadingSpinner';
+import { EmptyState } from '../components/EmptyState';
 import { Blog } from '../types';
 import { spacing, fontSize, radius } from '../constants/theme';
 import { CalendarStackParamList } from '../navigation/types';
@@ -24,7 +25,7 @@ type CalendarNavProp = NativeStackNavigationProp<CalendarStackParamList>;
 
 export function CalendarScreen() {
   const { theme, themeName } = useTheme();
-  const { session } = useAuth();
+  const { session, isDeviceContinue } = useAuth();
   const { colors } = theme;
   const navigation = useNavigation<CalendarNavProp>();
 
@@ -32,7 +33,7 @@ export function CalendarScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useAllBlogsForCalendar(session?.access_token, session?.user?.id);
+    useAllBlogsForCalendar(session?.access_token, session?.user?.id, !isDeviceContinue);
 
   // Auto-fetch all pages
   React.useEffect(() => {
@@ -139,7 +140,12 @@ export function CalendarScreen() {
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
+      {isDeviceContinue ? (
+        <EmptyState
+          title="Sign in for calendar"
+          message="Your posting history appears here after you sign in with Google."
+        />
+      ) : isLoading ? (
         <LoadingSpinner fullScreen />
       ) : (
         <Calendar

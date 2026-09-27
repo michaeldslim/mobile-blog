@@ -72,7 +72,7 @@ export function flattenBlogPages(data: InfiniteData<GetBlogsResult> | undefined)
 }
 
 // ─── Single post
-export function useBlog(id: string, accessToken?: string | null) {
+export function useBlog(id: string, accessToken?: string | null, enabled = true) {
   return useQuery<Blog | null>({
     queryKey: ['blog', id],
     queryFn: async () => {
@@ -80,7 +80,7 @@ export function useBlog(id: string, accessToken?: string | null) {
       const result = await client.request<GetBlogByIdResult>(GET_BLOG_BY_ID, { id });
       return result.mobileBlogCollection.edges[0]?.node ?? null;
     },
-    enabled: !!id,
+    enabled: enabled && !!id && !!accessToken,
   });
 }
 
@@ -280,9 +280,14 @@ export function useLikeBlog(_accessToken?: string | null) {
 
 // ─── All posts for calendar view (current user's posts only)
 // Fetches all posts for the given author in batches and resolves to a flat array.
-export function useAllBlogsForCalendar(accessToken?: string | null, authorId?: string | null) {
+export function useAllBlogsForCalendar(
+  accessToken?: string | null,
+  authorId?: string | null,
+  enabled = true
+) {
   return useInfiniteQuery<GetBlogsResult, Error, InfiniteData<GetBlogsResult>, string[], string | null>({
     queryKey: ['blogs-calendar', authorId ?? ''],
+    enabled: enabled && !!accessToken,
     queryFn: async ({ pageParam }) => {
       const client = createGraphQLClient(accessToken);
       // When authorId is present, show all of the user's own posts (any status).

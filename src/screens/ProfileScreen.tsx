@@ -19,6 +19,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useBlogs, flattenBlogPages, useDeleteBlog } from '../hooks/useBlogs';
+import { useOfflineDrafts, useInvalidateOfflineDrafts } from '../hooks/useOfflineDrafts';
+import { removeOfflineDraft } from '../lib/offlineDrafts';
 import { PostCard } from '../components/PostCard';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { EmptyState } from '../components/EmptyState';
@@ -31,17 +33,21 @@ type ProfileNavProp = NativeStackNavigationProp<ProfileStackParamList>;
 
 export function ProfileScreen() {
   const { theme, themeName, setTheme, allThemes } = useTheme();
-  const { user, isAdmin, session, signOut } = useAuth();
+  const { user, effectiveUser, isAdmin, session, isDeviceContinue, signOut, leaveDeviceContinue } =
+    useAuth();
   const navigation = useNavigation<ProfileNavProp>();
   const { colors } = theme;
 
   const deleteMutation = useDeleteBlog(session?.access_token);
+  const { data: offlineDrafts = [] } = useOfflineDrafts();
+  const invalidateOfflineDrafts = useInvalidateOfflineDrafts();
 
   // My posts — all statuses
   const { data, isLoading, refetch, isRefetching } = useBlogs({
     allStatuses: true,
-    authorId: user?.id,
+    authorId: effectiveUser?.id,
     accessToken: session?.access_token,
+    enabled: !isDeviceContinue && !!session,
   });
 
   const myPosts = flattenBlogPages(data);
@@ -50,6 +56,20 @@ export function ProfileScreen() {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign Out', style: 'destructive', onPress: signOut },
+    ]);
+  };
+
+  const handleDeleteOfflineDraft = (localId: string, title: string) => {
+    Alert.alert('Delete offline note', `Remove "${title}" from this device?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await removeOfflineDraft(localId);
+          invalidateOfflineDrafts();
+        },
+      },
     ]);
   };
 
@@ -71,8 +91,15 @@ export function ProfileScreen() {
     ]);
   };
 
-  const avatarUri = user?.user_metadata?.avatar_url;
-  const displayName = user?.user_metadata?.full_name ?? user?.email ?? 'Unknown';
+  const avatarUri =
+    user?.user_metadata?.avatar_url ?? effectiveUser?.user_metadata?.avatar_url;
+  const displayName =
+    user?.user_metadata?.full_name ??
+    effectiveUser?.user_metadata?.full_name ??
+    user?.email ??
+    effectiveUser?.email ??
+    'Unknown';
+  const displayEmail = user?.email ?? effectiveUser?.email;
 
   const tabBarHeight = useBottomTabBarHeight();
   const insets = useSafeAreaInsets();
@@ -85,7 +112,10 @@ export function ProfileScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={refetch}
+            onRefresh={() => {
+              refetch();
+              invalidateOfflineDrafts();
+            }}
             tintColor={colors.primary}
           />
         }
@@ -102,7 +132,12 @@ export function ProfileScreen() {
             </View>
           )}
           <Text style={[styles.displayName, { color: colors.foreground }]}>{displayName}</Text>
-          <Text style={[styles.email, { color: colors.mutedForeground }]}>{user?.email}</Text>
+          <Text style={[styles.email, { color: colors.mutedForeground }]}>{displayEmail}</Text>
+          {isDeviceContinue && (
+            <Text style={[styles.deviceModeHint, { color: colors.mutedForeground }]}>
+              On-device mode — server posts hidden until you sign in.
+            </Text>
+          )}
           {isAdmin && (
             <View style={[styles.adminBadge, { backgroundColor: colors.primary }]}>
               <Text style={[styles.adminText, { color: colors.primaryForeground }]}>⭐ Admin</Text>
@@ -153,11 +188,93 @@ export function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
+          {offlineDrafts.length > 0 && (
+            <View style={styles.offlineSection}>
+              <Text style={[styles.offlineSectionTitle, { color: colors.foreground }]}>
+                Waiting to publish ({offlineDrafts.length})
+              </Text>
+              <Text style={[styles.offlineSectionHint, { color: colors.mutedForeground }]}>
+                Saved on this device — syncs automatically when you are online.
+              </Text>
+              {offlineDrafts.map((draft) => (
+                <View key={draft.localId} style={styles.myPostItem}>
+                  <TouchableOpacity
+                    style={[
+                      styles.myPostCard,
+                      { backgroundColor: colors.card, borderColor: colors.border },
+                    ]}
+                    onPress={() =>
+                      navigation.navigate('CreateEditPost', {
+                        mode: 'create',
+                        localDraftId: draft.localId,
+                      })
+                    }
+                    activeOpacity={0.75}
+                  >
+                    <View style={styles.myPostRow}>
+                      {draft.localImageUri ? (
+                        <Image source={{ uri: draft.localImageUri }} style={styles.myPostThumb} />
+                      ) : (
+                        <View
+                          style={[
+                            styles.myPostThumb,
+                            styles.myPostThumbPlaceholder,
+                            { backgroundColor: colors.muted },
+                          ]}
+                        >
+                          <MaterialIcons name="cloud-off" size={20} color={colors.mutedForeground} />
+                        </View>
+                      )}
+                      <View style={styles.myPostContent}>
+                        <View style={styles.myPostInfo}>
+                          <Text
+                            style={[styles.myPostTitle, { color: colors.foreground }]}
+                            numberOfLines={2}
+                          >
+                            {draft.title}
+                          </Text>
+                          <View style={[styles.statusPill, { backgroundColor: colors.accent }]}>
+                            <Text style={[styles.statusPillText, { color: colors.accentForeground }]}>
+                              pending sync
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.myPostActions}>
+                          <TouchableOpacity
+                            onPress={() =>
+                              navigation.navigate('CreateEditPost', {
+                                mode: 'create',
+                                localDraftId: draft.localId,
+                              })
+                            }
+                            style={[styles.actionBtn, { borderColor: colors.border }]}
+                          >
+                            <Text style={[styles.actionBtnText, { color: colors.foreground }]}>
+                              Edit
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteOfflineDraft(draft.localId, draft.title)}
+                            style={[styles.actionBtn, styles.deleteBtn, { borderColor: colors.destructive }]}
+                          >
+                            <Text style={[styles.actionBtnText, { color: colors.destructive }]}>
+                              Delete
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
           {isLoading ? (
             <LoadingSpinner />
-          ) : myPosts.length === 0 ? (
+          ) : myPosts.length === 0 && offlineDrafts.length === 0 ? (
             <EmptyState title="No posts yet" message="Tap '+ New' to write your first post." />
-          ) : (
+          ) : myPosts.length === 0 ? null : (
             myPosts.map((blog) => (
               <View key={blog.id} style={styles.myPostItem}>
                 <TouchableOpacity
@@ -210,14 +327,33 @@ export function ProfileScreen() {
           )}
         </View>
 
-        {/* Sign Out */}
         <View style={styles.section}>
-          <TouchableOpacity
-            style={[styles.signOutBtn, { borderColor: colors.destructive }]}
-            onPress={handleSignOut}
-          >
-            <Text style={[styles.signOutText, { color: colors.destructive }]}>Sign Out</Text>
-          </TouchableOpacity>
+          {isDeviceContinue ? (
+            <TouchableOpacity
+              style={[styles.signOutBtn, { borderColor: colors.border }]}
+              onPress={() => {
+                Alert.alert(
+                  'Return to sign-in',
+                  'Leave on-device mode? Your local drafts stay on this phone.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Continue', onPress: leaveDeviceContinue },
+                  ]
+                );
+              }}
+            >
+              <Text style={[styles.signOutText, { color: colors.foreground }]}>
+                Return to sign-in screen
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.signOutBtn, { borderColor: colors.destructive }]}
+              onPress={handleSignOut}
+            >
+              <Text style={[styles.signOutText, { color: colors.destructive }]}>Sign Out</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -260,6 +396,11 @@ const styles = StyleSheet.create({
   },
   email: {
     fontSize: fontSize.sm,
+  },
+  deviceModeHint: {
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    marginTop: spacing.xs,
   },
   adminBadge: {
     paddingHorizontal: spacing.md,
@@ -321,6 +462,18 @@ const styles = StyleSheet.create({
   newBtnText: {
     fontSize: fontSize.sm,
     fontWeight: '700',
+  },
+  offlineSection: {
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  offlineSectionTitle: {
+    fontSize: fontSize.base,
+    fontWeight: '700',
+  },
+  offlineSectionHint: {
+    fontSize: fontSize.sm,
+    marginBottom: spacing.xs,
   },
   myPostItem: {
     marginBottom: spacing.sm,
