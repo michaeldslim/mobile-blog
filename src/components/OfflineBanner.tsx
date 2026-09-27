@@ -1,21 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, AppState } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { checkOnline } from '../lib/networkStatus';
 
-const CHECK_URL = 'https://clients3.google.com/generate_204';
 const CHECK_INTERVAL_MS = 5000;
-
-async function checkOnline(): Promise<boolean> {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 3000);
-    const res = await fetch(CHECK_URL, { method: 'HEAD', signal: ctrl.signal });
-    clearTimeout(timer);
-    return res.status < 500;
-  } catch {
-    return false;
-  }
-}
 
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
